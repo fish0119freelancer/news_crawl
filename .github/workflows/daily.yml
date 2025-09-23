@@ -2,7 +2,7 @@ name: Daily News Report
 
 on:
   schedule:
-    - cron: "0 14 * * *" # 每天 UTC 14:00 → 台灣時間 22:00
+    - cron: "5 14 * * *"
   workflow_dispatch:
 
 jobs:
