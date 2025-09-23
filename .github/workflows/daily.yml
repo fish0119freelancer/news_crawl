@@ -1,0 +1,40 @@
+name: Daily News Crawl
+
+on:
+  schedule:
+    - cron: "0 9 * * *"   # 每天 9:00 UTC 執行 (台灣時間 17:00)
+  workflow_dispatch:       # 手動觸發用
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run crawler
+        run: python main.py
+
+      - name: Send to LINE
+        run: |
+          curl -v -X POST https://api.line.me/v2/bot/message/push \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
+          -d "{
+                \"to\": \"${{ secrets.LINE_USER_ID }}\",
+                \"messages\": [
+                  {
+                    \"type\": \"text\",
+                    \"text\": \"今日新聞已生成 ✅，請查看 Render 儲存的 PDF 或 GitHub Artifacts。\"
+                  }
+                ]
+              }"
