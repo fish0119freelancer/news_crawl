@@ -2,7 +2,7 @@ name: Daily News Report
 
 on:
   schedule:
-    - cron: "5 14 * * *"
+    - cron: "5 14 * * *" # 台灣時間 22:05
   workflow_dispatch:
 
 jobs:
@@ -24,20 +24,18 @@ jobs:
       - name: Generate PDF
         run: python main.py
 
-      # 把 PDF 複製到 docs 資料夾 (GitHub Pages)
-      - name: Move PDF to docs
+      - name: Prepare docs folder
         run: |
           mkdir -p docs
           cp news_report.pdf docs/
           touch docs/.nojekyll
 
-      - name: Commit PDF to gh-pages
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/news_report.pdf
-          git commit -m "update daily report"
-          git push origin main
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./docs
 
       - name: Send LINE message
         run: |
