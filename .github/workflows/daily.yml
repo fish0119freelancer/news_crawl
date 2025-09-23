@@ -29,6 +29,7 @@ jobs:
         run: |
           mkdir -p docs
           cp news_report.pdf docs/
+          touch docs/.nojekyll
 
       - name: Commit PDF to gh-pages
         run: |
