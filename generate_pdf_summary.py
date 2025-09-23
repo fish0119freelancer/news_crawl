@@ -9,7 +9,7 @@ from reportlab.lib import colors
 
 # ========= 字體設定 =========
 FONT_CHINESE = "./NotoSansTC-VariableFont_wght.ttf"  # 可換成 NotoSansTC.ttf
-FONT_ENGLISH = "/System/Library/Fonts/Supplemental/Times New Roman.ttf"
+FONT_ENGLISH = "./Times New Roman.ttf"
 
 if not os.path.exists(FONT_CHINESE):
     raise FileNotFoundError(f"❌ 找不到中文字體：{FONT_CHINESE}")
