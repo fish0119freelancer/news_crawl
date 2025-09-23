@@ -24,18 +24,20 @@ jobs:
       - name: Generate PDF
         run: python main.py
 
-      - name: Prepare docs folder
+      - name: Move PDF to docs
         run: |
           mkdir -p docs
           cp news_report.pdf docs/
           touch docs/.nojekyll
 
-      - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: ./docs
+      - name: Commit PDF to main/docs
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git pull origin main --rebase
+          git add docs/news_report.pdf
+          git commit -m "update daily report" || echo "No changes to commit"
+          git push origin main
 
       - name: Send LINE message
         run: |
