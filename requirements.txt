@@ -1,0 +1,5 @@
+beautifulsoup4==4.13.5
+feedparser==6.0.12
+openai==1.108.2
+reportlab==4.4.4
+Requests==2.32.5

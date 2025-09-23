@@ -1,0 +1,16 @@
+http://feeds.nature.com/natbiomedeng/rss/current
+http://feeds.nature.com/nm/rss/current
+http://feeds.nature.com/nbt/rss/current
+http://feeds.nature.com/nrd/rss/current
+http://feeds.nature.com/nrm/rss/current
+http://feeds.nature.com/nrg/rss/current
+https://www.thelancet.com/rssfeed/lancet/ebio/rss
+https://rss.sciencedirect.com/publication/science/13504533
+https://biomedical-engineering-online.biomedcentral.com/articles/rss.xml
+https://bmcmedicine.biomedcentral.com/articles/rss.xml
+https://journals.plos.org/plosbiology/feed/atom
+https://journals.plos.org/plosmedicine/feed/atom
+https://www.sciencedaily.com/rss/health_medicine/biomedical_engineering.xml
+https://www.eurekalert.org/rss/biology/bioengineering.xml
+https://www.news-medical.net/tag/feed/Biomedical-Engineering.aspx
+https://medlineplus.gov/feeds/news_en.xml
