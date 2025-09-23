@@ -22,7 +22,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Generate PDF
-        run: python generate_pdf_summary.py
+        run: python main.py
 
       # 把 PDF 複製到 docs 資料夾 (GitHub Pages)
       - name: Move PDF to docs
