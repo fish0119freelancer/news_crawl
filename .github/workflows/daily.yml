@@ -2,7 +2,7 @@ name: Daily News Report
 
 on:
   schedule:
-    - cron: "16 1 * * *" 
+    - cron: "16 1 * * *" # 台灣時間 09:16 UTC+8 → 22:16
   workflow_dispatch:
 
 jobs:
@@ -26,6 +26,19 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
+      # 🔍 Debug：確認 PDF 有沒有生成
+      - name: Check generated files
+        run: ls -al
+
+      - name: Check PDF exists
+        run: |
+          if [ -f news_report.pdf ]; then
+            echo "✅ PDF generated successfully"
+          else
+            echo "❌ PDF not found"
+            exit 1
+          fi
+
       - name: Move PDF to docs
         run: |
           mkdir -p docs
@@ -44,7 +57,7 @@ jobs:
       - name: Send LINE message
         run: |
           TODAY=$(date +"%Y-%m-%d")
-          URL="https://<你的GitHub帳號>.github.io/<repo名稱>/docs/news_report.pdf"
+          URL="https://<你的GitHub帳號>.github.io/<repo名稱>/news_report.pdf"
           curl -X POST https://api.line.me/v2/bot/message/push \
             -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
             -H "Content-Type: application/json" \
