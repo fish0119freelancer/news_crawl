@@ -2,7 +2,7 @@ name: Daily News Report
 
 on:
   schedule:
-    - cron: "10 1 * * *" # 台灣時間 22:05
+    - cron: "16 1 * * *" 
   workflow_dispatch:
 
 jobs:
@@ -44,7 +44,7 @@ jobs:
       - name: Send LINE message
         run: |
           TODAY=$(date +"%Y-%m-%d")
-          URL="https://<你的GitHub帳號>.github.io/<repo名稱>/news_report.pdf"
+          URL="https://<你的GitHub帳號>.github.io/<repo名稱>/docs/news_report.pdf"
           curl -X POST https://api.line.me/v2/bot/message/push \
             -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
             -H "Content-Type: application/json" \
