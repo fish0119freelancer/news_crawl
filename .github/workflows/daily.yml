@@ -60,7 +60,10 @@ jobs:
       - name: Send LINE message
         run: |
           TODAY=$(date +"%Y-%m-%d")
-          URL="https://<你的GitHub帳號>.github.io/<repo名稱>/news_report.pdf"
+          OWNER=${{ github.repository_owner }}
+          REPO=${{ github.event.repository.name }}
+          URL="https://${OWNER}.github.io/${REPO}/news_report.pdf"
+
           curl -X POST https://api.line.me/v2/bot/message/push \
             -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
             -H "Content-Type: application/json" \
