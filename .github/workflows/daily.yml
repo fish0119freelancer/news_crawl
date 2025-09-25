@@ -2,7 +2,7 @@ name: Daily News Report
 
 on:
   schedule:
-    - cron: "16 1 * * *" # 台灣時間 09:16 UTC+8 → 22:16
+    - cron: "16 1 * * *" # 台灣時間 09:16 UTC+8 → UTC 01:16
   workflow_dispatch:
 
 jobs:
@@ -21,48 +21,54 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Generate PDF
+      - name: Generate Daily PDF
         run: python main.py
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-      # 🔍 Debug：確認 PDF 有沒有生成
+      # 🔍 Debug：列出當前目錄檔案
       - name: Check generated files
         run: ls -al
 
+      # ✅ 確認 PDF 是否存在
       - name: Check PDF exists
         run: |
-          if [ -f news_report.pdf ]; then
-            echo "✅ PDF generated successfully"
+          TODAY=$(date +"%Y%m%d")
+          if [ -f "news_summary_${TODAY}.pdf" ]; then
+            echo "✅ PDF generated successfully: news_summary_${TODAY}.pdf"
           else
             echo "❌ PDF not found"
             exit 1
           fi
 
+      # 📂 將 PDF 移動到 docs 目錄
       - name: Move PDF to docs
         run: |
+          TODAY=$(date +"%Y%m%d")
           mkdir -p docs
-          cp news_report.pdf docs/
+          cp "news_summary_${TODAY}.pdf" "docs/news_summary_${TODAY}.pdf"
+          # 保持 GitHub Pages 不要被 Jekyll 處理
           touch docs/.nojekyll
 
+      # 📤 Commit PDF 到 main/docs
       - name: Commit PDF to main/docs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          TODAY=$(date +"%Y%m%d")
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/news_report.pdf
-          git commit -m "update daily report" || echo "No changes to commit"
+          git add "docs/news_summary_${TODAY}.pdf"
+          git commit -m "update daily report: ${TODAY}" || echo "No changes to commit"
           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git main
 
-
-
+      # 📢 發送 LINE 推播通知
       - name: Send LINE message
         run: |
-          TODAY=$(date +"%Y-%m-%d")
+          TODAY=$(date +"%Y%m%d")
           OWNER=${{ github.repository_owner }}
           REPO=${{ github.event.repository.name }}
-          URL="https://${OWNER}.github.io/${REPO}/news_report.pdf"
+          URL="https://${OWNER}.github.io/${REPO}/news_summary_${TODAY}.pdf"
 
           curl -X POST https://api.line.me/v2/bot/message/push \
             -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
