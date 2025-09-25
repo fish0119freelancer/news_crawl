@@ -13,7 +13,7 @@ from reportlab.lib import colors
 from reportlab.lib.units import mm
 
 # ========= 字體設定 =========
-FONT_CHINESE = "./biaokai.ttc"   # 標楷體，請確認路徑正確
+FONT_CHINESE = "./biaokai.ttc"
 FONT_ENGLISH = "./Times New Roman.ttf"
 
 if os.path.exists(FONT_CHINESE):
@@ -69,7 +69,6 @@ def fix_markdown_headings(lines):
         if not stripped:
             corrected.append(line)
             continue
-        # 第一行強制 H1
         if i == 0 and stripped.startswith("#"):
             corrected.append("# " + stripped.lstrip("# ").strip() + "\n")
             continue
@@ -86,9 +85,7 @@ def add_page_number(canvas, doc):
     canvas.saveState()
     canvas.setFont("Biaokai", 9)
     canvas.setFillColor(SECONDARY_COLOR)
-    # 頁眉
     canvas.drawString(20 * mm, 285 * mm, "每日生醫新聞解讀")
-    # 頁碼
     canvas.setFillColor(colors.grey)
     canvas.drawRightString(200 * mm, 15 * mm, f"第 {doc.page} 頁")
     canvas.restoreState()
@@ -99,9 +96,8 @@ def build_cover(title, subtitle):
     top_bar.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), PRIMARY_COLOR)]))
     cover.append(top_bar)
     cover.append(Spacer(1, 40))
-    # Logo (可選)
-    if os.path.exists("logo.jpg"):
-        logo = Image("logo.jpg", width=300, height=300)
+    if os.path.exists("logo.png"):
+        logo = Image("logo.png", width=492, height=90)
         logo.hAlign = "CENTER"
         cover.append(logo)
         cover.append(Spacer(1, 20))
@@ -131,12 +127,12 @@ def styled_heading(text):
     ]))
     return tbl
 
-# ========= 主要功能 =========
+# ========= 專門給 main.py 用的 =========
 def extract_references_from_md(md_file):
     """
     讀取 markdown 檔，回傳:
     - cleaned_paragraphs: list[str]
-    - references: list[str] (如果有原文連結)
+    - references: list[str]
     """
     paragraphs = []
     references = []
@@ -157,10 +153,16 @@ def extract_references_from_md(md_file):
         paragraphs.append("\n".join(buf).strip())
     return paragraphs, references
 
+def md_to_pdf(md_file, output_file="news_summary.pdf"):
+    """
+    與舊版相容：直接讀取 markdown 檔並輸出 PDF
+    """
+    paragraphs, refs = extract_references_from_md(md_file)
+    generate_pdf(paragraphs, refs, output_file=output_file)
+
 def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
     """
-    將多段 markdown 文字直接轉為 PDF
-    paragraphs: list[str]
+    新接口：直接接收多段 markdown 字串並輸出 PDF
     """
     story = build_cover("每日生醫新聞報告", "技術導讀與學習地圖")
     for block in paragraphs:
@@ -203,7 +205,6 @@ def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
                 else:
                     flush_buffer(); flush_list()
                 continue
-
             if l.startswith("## 學習路徑"):
                 flush_buffer(); flush_list()
                 story.append(Paragraph("學習路徑", styles["ChineseHeading2"]))
