@@ -11,6 +11,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib import colors
 from reportlab.lib.units import mm
+from reportlab.lib.utils import ImageReader
 
 # ========= 字體設定 =========
 FONT_CHINESE = "./biaokai.ttc"
@@ -27,7 +28,6 @@ if os.path.exists(FONT_ENGLISH):
 PRIMARY_COLOR = colors.HexColor("#0A3D62")
 SECONDARY_COLOR = colors.HexColor("#3C6382")
 HIGHLIGHT_COLOR = colors.HexColor("#60A3BC")
-ACCENT_COLOR = colors.HexColor("#F8C291")
 
 # ========= 樣式設定 =========
 styles = getSampleStyleSheet()
@@ -60,7 +60,49 @@ styles.add(ParagraphStyle(
     leftIndent=20, spaceAfter=8, textColor=SECONDARY_COLOR, italic=True
 ))
 
-# ========= 工具函式 =========
+# ========= 背景與浮水印 =========
+def add_page_background(canvas, doc):
+    """繪製每一頁背景 + 浮水印"""
+    canvas.saveState()
+    # 淡藍背景
+    canvas.setFillColorRGB(0.96, 0.98, 1)
+    canvas.rect(0, 0, A4[0], A4[1], fill=1, stroke=0)
+
+    # 頂部深藍橫條
+    canvas.setFillColor(PRIMARY_COLOR)
+    canvas.rect(0, A4[1]-60, A4[0], 60, fill=1, stroke=0)
+
+    # 右下角波浪感
+    canvas.setFillColor(colors.Color(0.3, 0.6, 0.6, alpha=0.1))
+    canvas.circle(A4[0]-100, 50, 120, stroke=0, fill=1)
+
+    # 浮水印
+    if os.path.exists("logo.jpg"):
+        try:
+            logo = ImageReader("logo.jpg")
+            # 模擬透明度
+            canvas.saveState()
+            canvas.translate(A4[0]/2 - 150, A4[1]/2 - 150)
+            canvas.setFillAlpha(0.08)
+            canvas.drawImage(logo, 0, 0, width=300, height=300, mask='auto')
+            canvas.restoreState()
+        except Exception as e:
+            print(f"⚠️ 浮水印載入失敗：{e}")
+
+    canvas.restoreState()
+
+def add_page_number_with_bg(canvas, doc):
+    add_page_background(canvas, doc)
+    # 頁碼
+    canvas.saveState()
+    canvas.setFont("Biaokai", 9)
+    canvas.setFillColor(SECONDARY_COLOR)
+    canvas.drawString(20 * mm, 285 * mm, "每日生醫新聞解讀")
+    canvas.setFillColor(colors.grey)
+    canvas.drawRightString(200 * mm, 15 * mm, f"第 {doc.page} 頁")
+    canvas.restoreState()
+
+# ========= 工具 =========
 def fix_markdown_headings(lines):
     corrected = []
     section_h2 = ["摘要", "導讀", "學習路徑", "原文連結"]
@@ -81,25 +123,16 @@ def fix_markdown_headings(lines):
 def convert_markdown_links(text: str) -> str:
     return re.sub(r"\[(.*?)\]\((.*?)\)", r'<a href="\2">\1</a>', text)
 
-def add_page_number(canvas, doc):
-    canvas.saveState()
-    canvas.setFont("Biaokai", 9)
-    canvas.setFillColor(SECONDARY_COLOR)
-    canvas.drawString(20 * mm, 285 * mm, "每日生醫新聞解讀")
-    canvas.setFillColor(colors.grey)
-    canvas.drawRightString(200 * mm, 15 * mm, f"第 {doc.page} 頁")
-    canvas.restoreState()
-
 def build_cover(title, subtitle):
     cover = []
+    # 上方深藍條
     top_bar = Table([[""]], colWidths=[460], rowHeights=[30])
     top_bar.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), PRIMARY_COLOR)]))
     cover.append(top_bar)
     cover.append(Spacer(1, 40))
+    # logo
     if os.path.exists("logo.jpg"):
-        logo = Image("logo.jpg", width=300, height=300)
-        logo.hAlign = "CENTER"
-        cover.append(logo)
+        cover.append(Image("logo.jpg", width=200, height=200))
         cover.append(Spacer(1, 20))
     cover.append(Paragraph(title, styles["ReportTitle"]))
     cover.append(Paragraph(subtitle, styles["ReportSubtitle"]))
@@ -127,13 +160,8 @@ def styled_heading(text):
     ]))
     return tbl
 
-# ========= 專門給 main.py 用的 =========
+# ========= 主要API =========
 def extract_references_from_md(md_file):
-    """
-    讀取 markdown 檔，回傳:
-    - cleaned_paragraphs: list[str]
-    - references: list[str]
-    """
     paragraphs = []
     references = []
     with open(md_file, "r", encoding="utf-8") as f:
@@ -154,16 +182,10 @@ def extract_references_from_md(md_file):
     return paragraphs, references
 
 def md_to_pdf(md_file, output_file="news_summary.pdf"):
-    """
-    與舊版相容：直接讀取 markdown 檔並輸出 PDF
-    """
     paragraphs, refs = extract_references_from_md(md_file)
     generate_pdf(paragraphs, refs, output_file=output_file)
 
 def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
-    """
-    新接口：直接接收多段 markdown 字串並輸出 PDF
-    """
     story = build_cover("每日生醫新聞報告", "技術導讀與學習地圖")
     for block in paragraphs:
         lines = fix_markdown_headings(block.splitlines())
@@ -232,8 +254,14 @@ def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
         flush_buffer(); flush_list()
         story.append(Spacer(1, 12))
 
-    doc = SimpleDocTemplate(output_file, pagesize=A4,
-                            rightMargin=24, leftMargin=24,
-                            topMargin=36, bottomMargin=36)
-    doc.build(story, onFirstPage=add_page_number, onLaterPages=add_page_number)
+    doc = SimpleDocTemplate(
+        output_file, pagesize=A4,
+        rightMargin=24, leftMargin=24,
+        topMargin=36, bottomMargin=36
+    )
+    doc.build(
+        story,
+        onFirstPage=add_page_number_with_bg,
+        onLaterPages=add_page_number_with_bg
+    )
     print(f"✅ 已輸出 PDF：{output_file}")

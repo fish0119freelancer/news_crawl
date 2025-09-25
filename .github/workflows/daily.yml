@@ -78,7 +78,7 @@ jobs:
               \"messages\":[
                 {
                   \"type\":\"text\",
-                  \"text\":\"📄 $TODAY 的每日新聞報告已生成！下載連結：$URL\"
+                  \"text\":\"嗨!大家! 這是今天$TODAY的每日生醫新聞報告連結 :\n$URL\"
                 }
               ]
             }"
