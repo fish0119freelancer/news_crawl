@@ -16,6 +16,8 @@ from reportlab.lib.utils import ImageReader
 # ========= 字體設定 =========
 FONT_CHINESE = "./biaokai.ttc"
 FONT_ENGLISH = "./Times New Roman.ttf"
+# ===== 新增：上方橫條高度（使用 mm，保證不會伸進內容區） =====
+TOP_BAR_HEIGHT = 12 * mm  # 12mm ≈ 34pt，低於 topMargin=36pt
 
 if os.path.exists(FONT_CHINESE):
     pdfmetrics.registerFont(TTFont("Biaokai", FONT_CHINESE, subfontIndex=0))
@@ -68,23 +70,26 @@ def add_page_background(canvas, doc):
     canvas.setFillColorRGB(0.96, 0.98, 1)
     canvas.rect(0, 0, A4[0], A4[1], fill=1, stroke=0)
 
-    # 頂部深藍橫條
+    # 頂部深藍橫條（高度改為 TOP_BAR_HEIGHT）
     canvas.setFillColor(PRIMARY_COLOR)
-    canvas.rect(0, A4[1]-60, A4[0], 60, fill=1, stroke=0)
+    canvas.rect(0, A4[1] - TOP_BAR_HEIGHT, A4[0], TOP_BAR_HEIGHT, fill=1, stroke=0)
 
     # 右下角波浪感
     canvas.setFillColor(colors.Color(0.3, 0.6, 0.6, alpha=0.1))
-    canvas.circle(A4[0]-100, 50, 120, stroke=0, fill=1)
+    canvas.circle(A4[0] - 100, 50, 120, stroke=0, fill=1)
 
     # 浮水印
     if os.path.exists("logo.jpg"):
         try:
             logo = ImageReader("logo.jpg")
-            # 模擬透明度
             canvas.saveState()
-            canvas.translate(A4[0]/2 - 150, A4[1]/2 - 150)
-            canvas.setFillAlpha(0.08)
-            canvas.drawImage(logo, 0, 0, width=300, height=300, mask='auto')
+            # 模擬透明度（某些版本沒有 setFillAlpha，這裡安全 try）
+            try:
+                canvas.setFillAlpha(0.08)
+            except Exception:
+                pass
+            canvas.drawImage(logo, A4[0]/2 - 250, A4[1]/2 - 250,
+                             width=500, height=500, preserveAspectRatio=True, mask='auto')
             canvas.restoreState()
         except Exception as e:
             print(f"⚠️ 浮水印載入失敗：{e}")
@@ -92,12 +97,20 @@ def add_page_background(canvas, doc):
     canvas.restoreState()
 
 def add_page_number_with_bg(canvas, doc):
+    # 先畫背景與橫條
     add_page_background(canvas, doc)
-    # 頁碼
+
+    # 橫條中的左上抬頭（改成白色並置於藍條垂直中線）
+    canvas.saveState()
+    canvas.setFont("Biaokai", 10)  # 原本是 9pt，略微放大以提升可讀性
+    canvas.setFillColor(colors.whitesmoke)
+    header_y = A4[1] - (TOP_BAR_HEIGHT / 2) + 1.5 * mm  # 垂直置中微調
+    canvas.drawString(20 * mm, header_y, "每日生醫新聞解讀")
+    canvas.restoreState()
+
+    # 頁腳頁碼（維持原本顏色與位置）
     canvas.saveState()
     canvas.setFont("Biaokai", 9)
-    canvas.setFillColor(SECONDARY_COLOR)
-    canvas.drawString(20 * mm, 285 * mm, "每日生醫新聞解讀")
     canvas.setFillColor(colors.grey)
     canvas.drawRightString(200 * mm, 15 * mm, f"第 {doc.page} 頁")
     canvas.restoreState()
@@ -126,7 +139,7 @@ def convert_markdown_links(text: str) -> str:
 def build_cover(title, subtitle):
     cover = []
     # 上方深藍條
-    top_bar = Table([[""]], colWidths=[460], rowHeights=[30])
+    top_bar = Table([[""]], colWidths=[460], rowHeights=[20])
     top_bar.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), PRIMARY_COLOR)]))
     cover.append(top_bar)
     cover.append(Spacer(1, 40))
@@ -153,8 +166,8 @@ def styled_heading(text):
     )
     tbl.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#2C2C2C")),
-        ("LEFTPADDING", (0, 0), (-1, -1), 10),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
         ("TOPPADDING", (0, 0), (-1, -1), 8),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
     ]))

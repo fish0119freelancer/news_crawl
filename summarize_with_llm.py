@@ -8,7 +8,7 @@ def generate_news_summary_and_opinion(article):
 你是一位「生醫跨領域提倡者」，需要幫助讀者快速理解最新生醫/醫工文章。
 
 請針對以下文章資訊，生成一則新聞解讀，並嚴格包含五個部分，格式如下：
-# {article['title']}
+# {article['title']}(轉為中文)
 
 ## 摘要
 (以原來文章內容的方式做翻譯，適當分段，並保留專有名詞)
