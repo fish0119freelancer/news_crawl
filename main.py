@@ -8,7 +8,7 @@ from summarize_with_llm import generate_news_summary_and_opinion, llm_batch_summ
 from report_generator import format_report
 from fetch_articles import fetch_today_from_rss
 from generate_pdf_summary import md_to_pdf
-from email_delivery import load_recipients, send_pdf_via_email
+
 
 # ====== 關鍵字設定（可用 keywords.txt 覆蓋） ======
 DEFAULT_KEYWORDS = [
