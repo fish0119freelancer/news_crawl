@@ -96,8 +96,8 @@ def build_cover(title, subtitle):
     top_bar.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), PRIMARY_COLOR)]))
     cover.append(top_bar)
     cover.append(Spacer(1, 40))
-    if os.path.exists("logo.png"):
-        logo = Image("logo.png", width=492, height=90)
+    if os.path.exists("logo.jpg"):
+        logo = Image("logo.jpg", width=300, height=300)
         logo.hAlign = "CENTER"
         cover.append(logo)
         cover.append(Spacer(1, 20))

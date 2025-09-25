@@ -11,7 +11,7 @@ def generate_news_summary_and_opinion(article):
 # {article['title']}
 
 ## 摘要
-（以專業人士角度，清楚解釋新穎性、方法與重要性，需著重於技術方法）
+(以原來文章內容的方式做翻譯，適當分段，並保留專有名詞)
 
 ## 導讀
 （以初學者角度，淺白解釋，但保留專有名詞，並在括號內補充簡單定義）
@@ -30,7 +30,7 @@ def generate_news_summary_and_opinion(article):
 """
 
     res = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.4
     )
