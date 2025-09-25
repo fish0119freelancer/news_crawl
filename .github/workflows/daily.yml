@@ -63,12 +63,22 @@ jobs:
           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git main
 
       # 📢 發送 LINE 推播通知
+            # 📢 發送 LINE 推播通知
       - name: Send LINE message
         run: |
           TODAY=$(date +"%Y%m%d")
           OWNER=${{ github.repository_owner }}
           REPO=${{ github.event.repository.name }}
           URL="https://${OWNER}.github.io/${REPO}/news_summary_${TODAY}.pdf"
+
+          # 讀取 title.txt 內容並加上編號
+          if [ -f title.txt ]; then
+            TITLES=$(nl -w2 -s'. ' title.txt | sed ':a;N;$!ba;s/\n/\\n/g')
+          else
+            TITLES="(無標題)"
+          fi
+
+          MSG="嗨!大家! 這是今天${TODAY}的每日生醫新聞報告 :\n${TITLES}\n${URL}"
 
           curl -X POST https://api.line.me/v2/bot/message/push \
             -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
@@ -78,7 +88,7 @@ jobs:
               \"messages\":[
                 {
                   \"type\":\"text\",
-                  \"text\":\"嗨!大家! 這是今天$TODAY的每日生醫新聞報告連結 :\n$URL\"
+                  \"text\":\"${MSG}\"
                 }
               ]
             }"

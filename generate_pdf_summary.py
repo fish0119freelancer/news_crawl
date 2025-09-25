@@ -200,6 +200,8 @@ def md_to_pdf(md_file, output_file="news_summary.pdf"):
 
 def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
     story = build_cover("每日生醫新聞報告", "技術導讀與學習地圖")
+    all_titles = []  # 🔥 用來收集標題
+
     for block in paragraphs:
         lines = fix_markdown_headings(block.splitlines())
         buffer, list_buffer = [], []
@@ -236,30 +238,41 @@ def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
             l = line.strip()
             if not l:
                 if in_learning:
-                    flush_learning(); in_learning=False
+                    flush_learning(); in_learning = False
                 else:
                     flush_buffer(); flush_list()
                 continue
-            if l.startswith("## 學習路徑"):
-                flush_buffer(); flush_list()
-                story.append(Paragraph("學習路徑", styles["ChineseHeading2"]))
-                in_learning = True; learning_items=[]
-            elif in_learning and re.match(r"^\d+\.\s+", l):
-                learning_items.append(re.sub(r"^\d+\.\s+", "", l).strip())
-            elif l.startswith("### "):
-                flush_buffer(); flush_list()
-                story.append(Paragraph(l[4:], styles["ChineseHeading3"]))
-            elif l.startswith("## "):
-                flush_buffer(); flush_list()
-                story.append(Paragraph(l[3:], styles["ChineseHeading2"]))
-            elif l.startswith("# "):
+
+            if l.startswith("# "):  # H1
+                all_titles.append(l[2:].strip())
                 flush_buffer(); flush_list()
                 story.append(styled_heading(l[2:]))
+
+            elif l.startswith("## "):  # H2
+                # all_titles.append(l[3:].strip())
+                flush_buffer(); flush_list()
+                story.append(Paragraph(l[3:], styles["ChineseHeading2"]))
+
+            elif l.startswith("### "):  # H3
+                # all_titles.append(l[4:].strip())
+                flush_buffer(); flush_list()
+                story.append(Paragraph(l[4:], styles["ChineseHeading3"]))
+
+            elif l.startswith("## 學習路徑"):
+                flush_buffer(); flush_list()
+                story.append(Paragraph("學習路徑", styles["ChineseHeading2"]))
+                in_learning = True; learning_items = []
+
+            elif in_learning and re.match(r"^\d+\.\s+", l):
+                learning_items.append(re.sub(r"^\d+\.\s+", "", l).strip())
+
             elif l.startswith("> "):
                 flush_buffer(); flush_list()
                 story.append(Paragraph(convert_markdown_links(l[2:]), styles["Quote"]))
+
             elif l.startswith("- "):
                 flush_buffer(); list_buffer.append(l[2:])
+
             else:
                 buffer.append(l)
 
@@ -267,6 +280,12 @@ def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
         flush_buffer(); flush_list()
         story.append(Spacer(1, 12))
 
+    # ====== 將所有標題存成 title.txt ======
+    with open("title.txt", "w", encoding="utf-8") as f:
+        f.write("\n".join(all_titles))
+    print(f"📝 已輸出所有標題到 title.txt，共 {len(all_titles)} 筆")
+
+    # ====== 產生 PDF ======
     doc = SimpleDocTemplate(
         output_file, pagesize=A4,
         rightMargin=24, leftMargin=24,
@@ -278,3 +297,4 @@ def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
         onLaterPages=add_page_number_with_bg
     )
     print(f"✅ 已輸出 PDF：{output_file}")
+
