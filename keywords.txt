@@ -1,0 +1,93 @@
+# ========================
+# 生理訊號 / 醫療裝置
+# ========================
+biomedical signal
+biosignal
+ECG
+EEG
+EMG
+PPG
+rPPG
+BCG
+stethoscope
+heart sound
+wearable
+wearable device
+smart wearable
+medical device
+biosensor
+sensor fusion
+
+# ========================
+# 外泌體 / 精準醫療
+# ========================
+extracellular vesicle
+extracellular vesicles
+exosome
+exosomes
+liquid biopsy
+circulating nucleic acid
+circulating tumor DNA
+ctDNA
+
+# ========================
+# 神經科學 / 心理學
+# ========================
+neuroscience
+brain
+brain-computer interface
+BCI
+neurotechnology
+cognitive neuroscience
+neuroimaging
+EEG-based
+fMRI
+psychology
+behavioral science
+mental health
+psychiatry
+
+# ========================
+# AI / 數據分析
+# ========================
+artificial intelligence
+machine learning
+deep learning
+computer vision
+medical imaging
+medical AI
+signal processing
+digital health
+telemedicine
+remote monitoring
+
+# ========================
+# 產業趨勢 / 法規
+# ========================
+medtech
+healthtech
+biotech
+precision medicine
+regulatory
+FDA
+MDR
+TFDA
+CE mark
+market analysis
+
+# ========================
+# 生科基礎研究
+# ========================
+cell biology
+molecular biology
+genetics
+genomics
+proteomics
+transcriptomics
+epigenetics
+immunology
+stem cell
+cancer biology
+developmental biology
+metabolism
+biochemistry
