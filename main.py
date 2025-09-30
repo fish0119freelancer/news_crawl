@@ -1,5 +1,5 @@
 # main.py
-# RSS + 關鍵字篩選(可開關) + 領域分組 + 每領域最多5篇 + LLM 摘要 + PDF
+# RSS + 關鍵字篩選(可開關) + 領域分組 + 每領域最多5篇 + LLM 摘要 + PDF (含可點擊目錄)
 import os
 import re
 from datetime import datetime
@@ -11,39 +11,31 @@ from fetch_articles import fetch_today_from_rss
 from generate_pdf_summary import md_to_pdf
 
 # ====== FLAG：是否啟用關鍵字篩選 ======
-USE_KEYWORDS = True   # ← True 啟用關鍵字篩選，False 全部文章都會處理
-
-# ====== FLAG：每個領域最多處理幾篇 ======
-MAX_PER_DOMAIN = 5
+USE_KEYWORDS = True   # True 啟用關鍵字篩選，False 全部文章都會處理
+MAX_PER_DOMAIN = 5    # 每個領域最多處理幾篇
 
 # ====== 關鍵字設定（可用 keywords.txt 覆蓋） ======
 DEFAULT_KEYWORDS = [
     # 生理訊號 / 醫療裝置
     "biomedical signal", "biosignal", "ECG", "EEG", "EMG", "PPG", "rPPG", "BCG", "stethoscope", "heart sound",
     "wearable", "wearable device", "smart wearable", "medical device", "biosensor", "sensor fusion",
-
     # 外泌體 / 精準醫療
     "extracellular vesicle", "extracellular vesicles", "exosome", "exosomes",
     "liquid biopsy", "circulating nucleic acid", "circulating tumor DNA", "ctDNA",
-
     # 神經科學 / 心理學
     "neuroscience", "brain", "brain-computer interface", "BCI", "neurotechnology",
     "cognitive neuroscience", "neuroimaging", "EEG-based", "fMRI", "psychology", "behavioral science",
     "mental health", "psychiatry",
-
     # AI / 數據分析
     "artificial intelligence", "machine learning", "deep learning", "computer vision", "medical imaging",
     "medical AI", "signal processing", "digital health", "telemedicine", "remote monitoring",
-
     # 產業趨勢 / 法規
     "medtech", "healthtech", "biotech", "precision medicine", "regulatory", "FDA", "MDR", "TFDA",
     "CE mark", "market analysis",
-
     # 生科基礎研究
     "cell biology", "molecular biology", "genetics", "genomics", "proteomics", "transcriptomics",
     "epigenetics", "immunology", "stem cell", "cancer biology", "developmental biology", "metabolism", "biochemistry",
 ]
-
 KEYWORDS_FILE = "keywords.txt"
 KEYWORD_MODE = "OR"  # OR / AND
 
@@ -72,7 +64,6 @@ def keyword_hits(text: str) -> list[str]:
     return hits
 
 def article_match(article: dict) -> tuple[bool, list[str]]:
-    """檢查文章是否符合關鍵字"""
     if not USE_KEYWORDS:
         return True, []
     text = " ".join([
@@ -88,7 +79,7 @@ def article_match(article: dict) -> tuple[bool, list[str]]:
         ok = len(hits) > 0
     return ok, hits
 
-# ====== 領域分組（每組最多 MAX_PER_DOMAIN 篇） ======
+# ====== 領域定義 ======
 DOMAIN_MAP = {
     "signal": [
         "biomedical signal", "biosignal", "ECG", "EEG", "EMG", "PPG", "rPPG", "BCG",
@@ -119,6 +110,15 @@ DOMAIN_MAP = {
         "developmental biology", "metabolism", "biochemistry"
     ]
 }
+DOMAIN_NAME = {
+    "signal": "生理訊號 / 醫療裝置",
+    "extracellular": "外泌體 / 精準醫療",
+    "neuro": "神經科學 / 心理學",
+    "ai": "AI / 數據分析",
+    "industry": "產業趨勢 / 法規",
+    "basicbio": "生科基礎研究",
+    "other": "其他"
+}
 
 def classify_domain(text: str) -> str:
     t = text.lower()
@@ -126,8 +126,6 @@ def classify_domain(text: str) -> str:
         if any(k.lower() in t for k in kws):
             return domain
     return "other"
-
-domain_count = {d: 0 for d in DOMAIN_MAP}
 
 # ===== 初始化檔案與日期 =====
 today_str = datetime.today().strftime("%Y%m%d")
@@ -152,7 +150,10 @@ else:
     print("🧲 關鍵字篩選：已停用，所有文章都會處理")
 print(f"⚖️ 每個領域最多處理 {MAX_PER_DOMAIN} 篇文章")
 
-# ===== 主迴圈 =====
+# ===== 分領域收集 =====
+domain_articles: dict[str, list[dict]] = {d: [] for d in DOMAIN_MAP}
+domain_articles["other"] = []
+
 for idx, url in enumerate(urls, 1):
     try:
         print(f"\n📡 [{idx}/{total_sources}] 掃描來源：{url}")
@@ -162,8 +163,6 @@ for idx, url in enumerate(urls, 1):
             continue
 
         print(f"📰 發現 {len(today_articles)} 篇新文章")
-        source_success = 0
-
         for i, article in enumerate(today_articles, 1):
             try:
                 if "text" not in article:
@@ -175,35 +174,41 @@ for idx, url in enumerate(urls, 1):
                     print(f"  ⏭️ 關鍵字未命中：{article.get('title','(無標題)')}")
                     continue
 
-                # 分類領域並檢查數量限制
-                fulltext = " ".join([article.get("title",""), article.get("summary",""), article.get("text","")])
+                fulltext = " ".join([
+                    article.get("title",""),
+                    article.get("summary",""),
+                    article.get("text","")
+                ])
                 domain = classify_domain(fulltext)
-                if domain in domain_count and domain_count[domain] >= MAX_PER_DOMAIN:
-                    print(f"  🚫 {article.get('title')} 已達 {domain} 上限 {MAX_PER_DOMAIN}")
-                    continue
-
-                print(f"  ⏳ [{i}/{len(today_articles)}] 處理文章：{article['title']} ｜🎯 命中：{', '.join(hits[:6])}{'…' if len(hits) > 6 else ''}")
-                summary_and_opinion = generate_news_summary_and_opinion(article)
-                report = format_report(article, summary_and_opinion)
-
-                with open(md_filename, "a", encoding="utf-8") as f:
-                    f.write(report + "\n\n" + "-"*90 + "\n\n")
-
+                domain_articles.setdefault(domain, []).append(article)
+                print(f"  ✅ 收錄文章：{article['title']} → {domain}")
                 success_count += 1
-                source_success += 1
-                if domain in domain_count:
-                    domain_count[domain] += 1
 
             except Exception as article_err:
                 print(f"  ❌ 文章處理失敗：{article.get('title','(無標題)')} → {article_err}")
                 fail_count += 1
 
-        if source_success > 0:
-            success_sources += 1
+        success_sources += 1
 
     except Exception as source_err:
         print(f"❌ 來源處理失敗：{url} → {source_err}")
         fail_count += 1
+
+# ===== 按領域輸出 Markdown =====
+with open(md_filename, "w", encoding="utf-8") as f:
+    for domain, articles in domain_articles.items():
+        if not articles:
+            continue
+        selected = articles[:MAX_PER_DOMAIN]
+        f.write(f"# {DOMAIN_NAME.get(domain, domain)}\n\n")
+        for article in selected:
+            try:
+                summary_and_opinion = generate_news_summary_and_opinion(article)
+                report = format_report(article, summary_and_opinion)
+                f.write(report + "\n\n" + "-" * 88 + "\n\n")
+            except Exception as e:
+                print(f"⚠️ 產生 {domain} 文章失敗：{article.get('title','(無標題)')} → {e}")
+                continue
 
 # ===== 統計報告 =====
 print("\n📊 爬蟲完成")

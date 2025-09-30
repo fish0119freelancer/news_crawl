@@ -16,8 +16,7 @@ from reportlab.lib.utils import ImageReader
 # ========= 字體設定 =========
 FONT_CHINESE = "./biaokai.ttc"
 FONT_ENGLISH = "./Times New Roman.ttf"
-# ===== 新增：上方橫條高度（使用 mm，保證不會伸進內容區） =====
-TOP_BAR_HEIGHT = 12 * mm  # 12mm ≈ 34pt，低於 topMargin=36pt
+TOP_BAR_HEIGHT = 12 * mm
 
 if os.path.exists(FONT_CHINESE):
     pdfmetrics.registerFont(TTFont("Biaokai", FONT_CHINESE, subfontIndex=0))
@@ -26,12 +25,14 @@ else:
 if os.path.exists(FONT_ENGLISH):
     pdfmetrics.registerFont(TTFont("TimesNewRoman", FONT_ENGLISH))
 
-# ========= 顏色設定 =========
+# ========= 顏色 =========
 PRIMARY_COLOR = colors.HexColor("#0A3D62")
 SECONDARY_COLOR = colors.HexColor("#3C6382")
 HIGHLIGHT_COLOR = colors.HexColor("#60A3BC")
+GOLD = colors.HexColor("#D4AF37")
+BLACK = colors.HexColor("#2C2C2C")
 
-# ========= 樣式設定 =========
+# ========= 樣式 =========
 styles = getSampleStyleSheet()
 styles.add(ParagraphStyle(
     name="ReportTitle", fontName="Biaokai", fontSize=28, leading=34,
@@ -42,48 +43,39 @@ styles.add(ParagraphStyle(
     textColor=SECONDARY_COLOR, alignment=1, spaceAfter=30
 ))
 styles.add(ParagraphStyle(
-    name="ChineseHeading1", fontName="Biaokai", fontSize=20, leading=24,
-    spaceAfter=12, spaceBefore=12, textColor=PRIMARY_COLOR
-))
-styles.add(ParagraphStyle(
-    name="ChineseHeading2", fontName="Biaokai", fontSize=16, leading=20,
-    spaceAfter=10, leftIndent=8, textColor=SECONDARY_COLOR
+    name="ChineseBody", fontName="Biaokai", fontSize=12, leading=18,
+    spaceAfter=8, textColor=colors.black
 ))
 styles.add(ParagraphStyle(
     name="ChineseHeading3", fontName="Biaokai", fontSize=14, leading=18,
     spaceAfter=8, leftIndent=16, textColor=HIGHLIGHT_COLOR
 ))
 styles.add(ParagraphStyle(
-    name="ChineseBody", fontName="Biaokai", fontSize=12, leading=18,
-    spaceAfter=8, textColor=colors.black
-))
-styles.add(ParagraphStyle(
     name="Quote", fontName="Biaokai", fontSize=12, leading=18,
     leftIndent=20, spaceAfter=8, textColor=SECONDARY_COLOR, italic=True
 ))
+styles.add(ParagraphStyle(
+    name="TOCItem", fontName="Biaokai", fontSize=12, leading=16,
+    leftIndent=20, textColor=PRIMARY_COLOR
+))
 
-# ========= 背景與浮水印 =========
+# ========= 背景與頁碼 =========
 def add_page_background(canvas, doc):
-    """繪製每一頁背景 + 浮水印"""
     canvas.saveState()
-    # 淡藍背景
+    # 淺藍背景
     canvas.setFillColorRGB(0.96, 0.98, 1)
     canvas.rect(0, 0, A4[0], A4[1], fill=1, stroke=0)
-
-    # 頂部深藍橫條（高度改為 TOP_BAR_HEIGHT）
+    # 深藍橫條
     canvas.setFillColor(PRIMARY_COLOR)
     canvas.rect(0, A4[1] - TOP_BAR_HEIGHT, A4[0], TOP_BAR_HEIGHT, fill=1, stroke=0)
-
     # 右下角波浪感
     canvas.setFillColor(colors.Color(0.3, 0.6, 0.6, alpha=0.1))
     canvas.circle(A4[0] - 100, 50, 120, stroke=0, fill=1)
-
     # 浮水印
     if os.path.exists("logo.jpg"):
         try:
             logo = ImageReader("logo.jpg")
             canvas.saveState()
-            # 模擬透明度（某些版本沒有 setFillAlpha，這裡安全 try）
             try:
                 canvas.setFillAlpha(0.08)
             except Exception:
@@ -93,48 +85,40 @@ def add_page_background(canvas, doc):
             canvas.restoreState()
         except Exception as e:
             print(f"⚠️ 浮水印載入失敗：{e}")
-
     canvas.restoreState()
 
 def add_page_number_with_bg(canvas, doc):
-    # 先畫背景與橫條
     add_page_background(canvas, doc)
-
-    # 橫條中的左上抬頭（改成白色並置於藍條垂直中線）
     canvas.saveState()
-    canvas.setFont("Biaokai", 10)  # 原本是 9pt，略微放大以提升可讀性
+    canvas.setFont("Biaokai", 10)
     canvas.setFillColor(colors.whitesmoke)
-    header_y = A4[1] - (TOP_BAR_HEIGHT / 2) + 1.5 * mm  # 垂直置中微調
+    header_y = A4[1] - (TOP_BAR_HEIGHT / 2) + 1.5 * mm
     canvas.drawString(20 * mm, header_y, "每日生醫新聞解讀")
-    canvas.restoreState()
-
-    # 頁腳頁碼（維持原本顏色與位置）
-    canvas.saveState()
     canvas.setFont("Biaokai", 9)
     canvas.setFillColor(colors.grey)
-    canvas.drawRightString(200 * mm, 15 * mm, f"第 {doc.page} 頁")
+    canvas.drawRightString(200 * mm, 15 * mm, f"第 {canvas.getPageNumber()} 頁")
     canvas.restoreState()
 
 # ========= 工具 =========
 def fix_markdown_headings(lines):
     corrected = []
-    section_h2 = ["摘要", "導讀", "學習路徑", "原文連結"]
+    section_h3 = ["摘要", "導讀", "學習路徑", "原文連結"]
     for i, line in enumerate(lines):
-        stripped = line.strip()
-        if not stripped:
+        s = line.strip()
+        if not s:
             corrected.append(line)
             continue
-        if i == 0 and stripped.startswith("#"):
-            corrected.append("# " + stripped.lstrip("# ").strip() + "\n")
+        if i == 0 and s.startswith("#"):
+            corrected.append("# " + s.lstrip("# ").strip() + "\n")
             continue
-        if any(stripped.lstrip("# ").startswith(sec) for sec in section_h2):
-            corrected.append("## " + stripped.lstrip("# ").strip() + "\n")
+        if any(s.lstrip("# ").startswith(sec) for sec in section_h3):
+            corrected.append("### " + s.lstrip("# ").strip() + "\n")
             continue
         corrected.append(line)
     return corrected
 
-def convert_markdown_links(text: str) -> str:
-    return re.sub(r"\[(.*?)\]\((.*?)\)", r'<a href="\2">\1</a>', text)
+def convert_markdown_links(t):
+    return re.sub(r"\[(.*?)\]\((.*?)\)", r'<a href="\2">\1</a>', t)
 
 def build_cover(title, subtitle):
     cover = []
@@ -158,14 +142,14 @@ def styled_heading(text):
     tbl = Table(
         [[Paragraph(text, ParagraphStyle(
             "HeadingInBox",
-            parent=styles["ChineseHeading1"],
-            textColor=colors.HexColor("#D4AF37"),
+            parent=styles["ChineseBody"],
+            textColor=GOLD,
             fontSize=20,
             leading=24
         ))]], colWidths=[460]
     )
     tbl.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#2C2C2C")),
+        ("BACKGROUND", (0, 0), (-1, -1), BLACK),
         ("LEFTPADDING", (0, 0), (-1, -1), 5),
         ("RIGHTPADDING", (0, 0), (-1, -1), 5),
         ("TOPPADDING", (0, 0), (-1, -1), 8),
@@ -173,17 +157,17 @@ def styled_heading(text):
     ]))
     return tbl
 
-# ========= 主要API =========
+# ========= 主流程 =========
 def extract_references_from_md(md_file):
     paragraphs = []
-    references = []
+    refs = []
     with open(md_file, "r", encoding="utf-8") as f:
         lines = f.readlines()
     lines = fix_markdown_headings(lines)
     buf = []
     for line in lines:
         if line.strip().startswith("http"):
-            references.append(line.strip())
+            refs.append(line.strip())
         if line.strip() == "---":
             if buf:
                 paragraphs.append("\n".join(buf).strip())
@@ -192,7 +176,7 @@ def extract_references_from_md(md_file):
             buf.append(line.rstrip())
     if buf:
         paragraphs.append("\n".join(buf).strip())
-    return paragraphs, references
+    return paragraphs, refs
 
 def md_to_pdf(md_file, output_file="news_summary.pdf"):
     paragraphs, refs = extract_references_from_md(md_file)
@@ -200,8 +184,10 @@ def md_to_pdf(md_file, output_file="news_summary.pdf"):
 
 def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
     story = build_cover("每日生醫新聞報告", "技術導讀與學習地圖")
-    all_titles = []  # 🔥 用來收集標題
+    toc_entries = []  # 存 H2
+    h2_titles = []
 
+    # === 先掃描並建出內容 ===
     for block in paragraphs:
         lines = fix_markdown_headings(block.splitlines())
         buffer, list_buffer = [], []
@@ -244,23 +230,33 @@ def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
                 continue
 
             if l.startswith("# "):  # H1
-                all_titles.append(l[2:].strip())
                 flush_buffer(); flush_list()
-                story.append(styled_heading(l[2:]))
+                story.append(PageBreak())
+                story.append(Spacer(1, 200))
+                story.append(Paragraph(l[2:].strip(), ParagraphStyle(
+                    "CategoryPage",
+                    fontName="Biaokai",
+                    fontSize=28,
+                    textColor=PRIMARY_COLOR,
+                    alignment=1
+                )))
+                story.append(PageBreak())
 
             elif l.startswith("## "):  # H2
-                # all_titles.append(l[3:].strip())
                 flush_buffer(); flush_list()
-                story.append(Paragraph(l[3:], styles["ChineseHeading2"]))
+                bookmark = f"h2_{len(toc_entries)}"
+                story.append(Paragraph(f'<a name="{bookmark}"/>', styles["ChineseBody"]))
+                story.append(styled_heading(l[3:].strip()))
+                toc_entries.append((l[3:].strip(), bookmark))
+                h2_titles.append(l[3:].strip())
 
             elif l.startswith("### "):  # H3
-                # all_titles.append(l[4:].strip())
                 flush_buffer(); flush_list()
                 story.append(Paragraph(l[4:], styles["ChineseHeading3"]))
 
             elif l.startswith("## 學習路徑"):
                 flush_buffer(); flush_list()
-                story.append(Paragraph("學習路徑", styles["ChineseHeading2"]))
+                story.append(Paragraph("學習路徑", styles["ChineseHeading3"]))
                 in_learning = True; learning_items = []
 
             elif in_learning and re.match(r"^\d+\.\s+", l):
@@ -278,23 +274,40 @@ def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
 
         if in_learning: flush_learning()
         flush_buffer(); flush_list()
-        story.append(Spacer(1, 12))
+        # 🔥 每篇文章後換頁
+        story.append(PageBreak())
 
-    # ====== 將所有標題存成 title.txt ======
+    # === 目錄頁放在封面後 ===
+    toc_page = [Paragraph("目錄", ParagraphStyle(
+        "TOCHeading",
+        fontName="Biaokai",
+        fontSize=20,
+        leading=24,
+        textColor=PRIMARY_COLOR,
+        spaceAfter=12
+    ))]
+    for title, bookmark in toc_entries:
+        toc_page.append(Paragraph(f'<link href="#{bookmark}">{title}</link>', styles["TOCItem"]))
+    story[1:1] = toc_page  # 插入封面後（成為第二頁）
+
+    # === 輸出 title.txt ===
     with open("title.txt", "w", encoding="utf-8") as f:
-        f.write("\n".join(all_titles))
-    print(f"📝 已輸出所有標題到 title.txt，共 {len(all_titles)} 筆")
+        f.write("\n".join(h2_titles))
+    print(f"📝 已輸出所有 H2 標題到 title.txt，共 {len(h2_titles)} 筆")
 
-    # ====== 產生 PDF ======
+    # === 建立 PDF ===
     doc = SimpleDocTemplate(
         output_file, pagesize=A4,
         rightMargin=24, leftMargin=24,
         topMargin=36, bottomMargin=36
     )
-    doc.build(
-        story,
-        onFirstPage=add_page_number_with_bg,
-        onLaterPages=add_page_number_with_bg
-    )
+    doc.build(story, onFirstPage=add_page_number_with_bg, onLaterPages=add_page_number_with_bg)
     print(f"✅ 已輸出 PDF：{output_file}")
 
+
+if __name__ == "__main__":
+    today_str = datetime.today().strftime("%Y%m%d")
+    md_filename = f"news_report_{today_str}.md"
+    pdf_filename = f"news_summary_{today_str}.pdf"
+    md_to_pdf(md_filename, pdf_filename)
+    print(f"✅ PDF 已完成：{pdf_filename}")
