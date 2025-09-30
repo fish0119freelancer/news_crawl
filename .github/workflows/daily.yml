@@ -71,24 +71,20 @@ jobs:
           REPO=${{ github.event.repository.name }}
           URL="https://${OWNER}.github.io/${REPO}/news_summary_${TODAY}.pdf"
 
-          # 讀取 title.txt 內容並加上編號
           if [ -f title.txt ]; then
-            TITLES=$(nl -w2 -s'. ' title.txt | sed ':a;N;$!ba;s/\n/\\n/g')
+            TITLES=$(nl -w2 -s'. ' title.txt)
           else
             TITLES="(無標題)"
           fi
 
           MSG="嗨!大家! 這是今天${TODAY}的每日生醫新聞報告 :\n${TITLES}\n${URL}"
 
+          # 用 jq 安全地包成 JSON
+          PAYLOAD=$(jq -n --arg to "${{ secrets.LINE_USER_ID }}" --arg msg "$MSG" \
+            '{to:$to, messages:[{type:"text", text:$msg}]}')
+
           curl -X POST https://api.line.me/v2/bot/message/push \
             -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "{
-              \"to\": \"${{ secrets.LINE_USER_ID }}\",
-              \"messages\":[
-                {
-                  \"type\":\"text\",
-                  \"text\":\"${MSG}\"
-                }
-              ]
-            }"
+            -d "$PAYLOAD"
+
