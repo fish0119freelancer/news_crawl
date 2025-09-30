@@ -63,7 +63,9 @@ jobs:
           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git main
 
       # 📢 發送 LINE 推播通知
-            # 📢 發送 LINE 推播通知
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Send LINE message
         run: |
           TODAY=$(date +"%Y%m%d")
@@ -79,12 +81,11 @@ jobs:
 
           MSG="嗨!大家! 這是今天${TODAY}的每日生醫新聞報告 :\n${TITLES}\n${URL}"
 
-          # 用 jq 安全地包成 JSON
           PAYLOAD=$(jq -n --arg to "${{ secrets.LINE_USER_ID }}" --arg msg "$MSG" \
             '{to:$to, messages:[{type:"text", text:$msg}]}')
 
+          echo "📤 Sending LINE push notification..."
           curl -X POST https://api.line.me/v2/bot/message/push \
             -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"
-
