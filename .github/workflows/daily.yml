@@ -71,15 +71,23 @@ jobs:
           URL="https://${OWNER}.github.io/${REPO}/news_summary_${TODAY}.pdf"
 
           if [ -f title.txt ]; then
-            TITLES=$(nl -w2 -s'. ' title.txt | sed ':a;N;$!ba;s/\n/\\n/g')
+            # nl 編號 → sed 把換行轉為真正換行（保留在 shell 變數中）
+            TITLES=$(nl -w2 -s'. ' title.txt)
           else
             TITLES="(無標題)"
           fi
 
           MSG="嗨!大家! 這是今天${TODAY}的每日生醫新聞報告 :\n${TITLES}\n${URL}"
 
+          # 用 jq 組 JSON，jq 會自動正確處理換行
           PAYLOAD=$(jq -n --arg to "${{ secrets.LINE_USER_ID }}" --arg msg "$MSG" \
             '{to:$to, messages:[{type:"text", text:$msg}]}')
+
+          curl -X POST https://api.line.me/v2/bot/message/push \
+            -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
+
 
           curl -X POST https://api.line.me/v2/bot/message/push \
             -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
