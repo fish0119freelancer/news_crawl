@@ -13,15 +13,25 @@ jobs:
       - name: Send LINE message
         run: |
           TODAY=$(date +"%Y%m%d")
-          URL="https://example.com/news_summary_${TODAY}.pdf"
-          TITLES="1. 測試新聞標題 A\n2. 測試新聞標題 B"
-          MSG="嗨!大家! 這是今天 ${TODAY} 的每日生醫新聞報告 :\n${TITLES}\n${URL}"
+          OWNER=${{ github.repository_owner }}
+          REPO=${{ github.event.repository.name }}
+          URL="https://${OWNER}.github.io/${REPO}/news_summary_${TODAY}.pdf"
 
+          if [ -f title.txt ]; then
+            # nl 編號 → sed 把換行轉為真正換行（保留在 shell 變數中）
+            TITLES=$(nl -w2 -s'. ' title.txt)
+          else
+            TITLES="(無標題)"
+          fi
+
+          MSG="嗨!大家! 這是今天${TODAY}的每日生醫新聞報告 :\n${TITLES}\n${URL}"
+
+          # 用 jq 組 JSON，jq 會自動正確處理換行
           PAYLOAD=$(jq -n --arg to "${{ secrets.LINE_USER_ID }}" --arg msg "$MSG" \
             '{to:$to, messages:[{type:"text", text:$msg}]}')
 
-          echo "📤 Sending LINE push notification..."
           curl -X POST https://api.line.me/v2/bot/message/push \
             -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"
+
