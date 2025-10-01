@@ -1,68 +1,3 @@
-name: Daily News Report
-
-on:
-  schedule:
-    - cron: "0 2 * * *" # 台灣時間 09:16 UTC+8
-  workflow_dispatch:
-
-permissions:
-  contents: write
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Generate Daily PDF
-        run: python main.py
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
-      - name: Check generated files
-        run: ls -al
-
-      - name: Check PDF exists
-        run: |
-          TODAY=$(date +"%Y%m%d")
-          if [ -f "news_summary_${TODAY}.pdf" ]; then
-            echo "✅ PDF generated successfully: news_summary_${TODAY}.pdf"
-          else
-            echo "❌ PDF not found"
-            exit 1
-          fi
-
-      - name: Move PDF to docs
-        run: |
-          TODAY=$(date +"%Y%m%d")
-          mkdir -p docs
-          cp "news_summary_${TODAY}.pdf" "docs/news_summary_${TODAY}.pdf"
-          touch docs/.nojekyll
-
-      - name: Commit PDF to main/docs
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TODAY=$(date +"%Y%m%d")
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add "docs/news_summary_${TODAY}.pdf"
-          git commit -m "update daily report: ${TODAY}" || echo "No changes to commit"
-          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git main
-
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
       - name: Send LINE message
         run: |
           TODAY=$(date +"%Y%m%d")
@@ -71,23 +6,18 @@ jobs:
           URL="https://${OWNER}.github.io/${REPO}/news_summary_${TODAY}.pdf"
 
           if [ -f title.txt ]; then
-            # nl 編號 → sed 把換行轉為真正換行（保留在 shell 變數中）
             TITLES=$(nl -w2 -s'. ' title.txt)
           else
             TITLES="(無標題)"
           fi
 
-          MSG="嗨!大家! 這是今天${TODAY}的每日生醫新聞報告 :\n${TITLES}\n${URL}"
+          # 這裡直接用真正的換行
+          MSG="嗨!大家! 這是今天${TODAY}的每日生醫新聞報告 :
+${TITLES}
+${URL}"
 
-          # 用 jq 組 JSON，jq 會自動正確處理換行
           PAYLOAD=$(jq -n --arg to "${{ secrets.LINE_USER_ID }}" --arg msg "$MSG" \
             '{to:$to, messages:[{type:"text", text:$msg}]}')
-
-          curl -X POST https://api.line.me/v2/bot/message/push \
-            -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "$PAYLOAD"
-
 
           curl -X POST https://api.line.me/v2/bot/message/push \
             -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
