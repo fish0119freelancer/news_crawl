@@ -2,8 +2,11 @@ name: Daily News Report
 
 on:
   schedule:
-    - cron: "47 1 * * *" # 台灣時間 09:16 UTC+8 → UTC 01:16
+    - cron: "16 1 * * *" # 台灣時間 09:16 UTC+8
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -26,11 +29,9 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-      # 🔍 Debug：列出當前目錄檔案
       - name: Check generated files
         run: ls -al
 
-      # ✅ 確認 PDF 是否存在
       - name: Check PDF exists
         run: |
           TODAY=$(date +"%Y%m%d")
@@ -41,16 +42,13 @@ jobs:
             exit 1
           fi
 
-      # 📂 將 PDF 移動到 docs 目錄
       - name: Move PDF to docs
         run: |
           TODAY=$(date +"%Y%m%d")
           mkdir -p docs
           cp "news_summary_${TODAY}.pdf" "docs/news_summary_${TODAY}.pdf"
-          # 保持 GitHub Pages 不要被 Jekyll 處理
           touch docs/.nojekyll
 
-      # 📤 Commit PDF 到 main/docs
       - name: Commit PDF to main/docs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -62,7 +60,6 @@ jobs:
           git commit -m "update daily report: ${TODAY}" || echo "No changes to commit"
           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git main
 
-      # 📢 發送 LINE 推播通知
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
@@ -74,7 +71,7 @@ jobs:
           URL="https://${OWNER}.github.io/${REPO}/news_summary_${TODAY}.pdf"
 
           if [ -f title.txt ]; then
-            TITLES=$(nl -w2 -s'. ' title.txt)
+            TITLES=$(nl -w2 -s'. ' title.txt | sed ':a;N;$!ba;s/\n/\\n/g')
           else
             TITLES="(無標題)"
           fi
@@ -84,7 +81,6 @@ jobs:
           PAYLOAD=$(jq -n --arg to "${{ secrets.LINE_USER_ID }}" --arg msg "$MSG" \
             '{to:$to, messages:[{type:"text", text:$msg}]}')
 
-          echo "📤 Sending LINE push notification..."
           curl -X POST https://api.line.me/v2/bot/message/push \
             -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
             -H "Content-Type: application/json" \
