@@ -17,7 +17,7 @@ from reportlab.lib.utils import ImageReader
 FONT_CHINESE = "./biaokai.ttc"
 FONT_ENGLISH = "./Times New Roman.ttf"
 TOP_BAR_HEIGHT = 12 * mm
-
+PAGE_WIDTH, PAGE_HEIGHT = A4
 if os.path.exists(FONT_CHINESE):
     pdfmetrics.registerFont(TTFont("Biaokai", FONT_CHINESE, subfontIndex=0))
 else:
@@ -47,6 +47,11 @@ styles.add(ParagraphStyle(
     spaceAfter=8, textColor=colors.black
 ))
 styles.add(ParagraphStyle(
+    name="ChineseHeading2", fontName="Biaokai", fontSize=20, leading=24,
+    textColor=GOLD, backColor=BLACK, spaceBefore=12, spaceAfter=12,
+    leftIndent=0, rightIndent=0
+))
+styles.add(ParagraphStyle(
     name="ChineseHeading3", fontName="Biaokai", fontSize=14, leading=18,
     spaceAfter=8, leftIndent=16, textColor=HIGHLIGHT_COLOR
 ))
@@ -62,16 +67,12 @@ styles.add(ParagraphStyle(
 # ========= 背景與頁碼 =========
 def add_page_background(canvas, doc):
     canvas.saveState()
-    # 淺藍背景
     canvas.setFillColorRGB(0.96, 0.98, 1)
     canvas.rect(0, 0, A4[0], A4[1], fill=1, stroke=0)
-    # 深藍橫條
     canvas.setFillColor(PRIMARY_COLOR)
     canvas.rect(0, A4[1] - TOP_BAR_HEIGHT, A4[0], TOP_BAR_HEIGHT, fill=1, stroke=0)
-    # 右下角波浪感
     canvas.setFillColor(colors.Color(0.3, 0.6, 0.6, alpha=0.1))
     canvas.circle(A4[0] - 100, 50, 120, stroke=0, fill=1)
-    # 浮水印
     if os.path.exists("logo.jpg"):
         try:
             logo = ImageReader("logo.jpg")
@@ -122,40 +123,22 @@ def convert_markdown_links(t):
 
 def build_cover(title, subtitle):
     cover = []
-    # 上方深藍條
     top_bar = Table([[""]], colWidths=[460], rowHeights=[20])
     top_bar.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), PRIMARY_COLOR)]))
     cover.append(top_bar)
     cover.append(Spacer(1, 40))
-    # logo
-    if os.path.exists("logo.jpg"):
-        cover.append(Image("logo.jpg", width=200, height=200))
-        cover.append(Spacer(1, 20))
     cover.append(Paragraph(title, styles["ReportTitle"]))
     cover.append(Paragraph(subtitle, styles["ReportSubtitle"]))
     cover.append(Spacer(1, 20))
+    if os.path.exists("logo.jpg"):
+        cover.append(Image("logo.jpg", width=200, height=200))
+        cover.append(Spacer(1, 300))
     cover.append(Paragraph(f"產出日期：{datetime.now().strftime('%Y/%m/%d')}", styles["ChineseBody"]))
     cover.append(PageBreak())
     return cover
 
-def styled_heading(text):
-    tbl = Table(
-        [[Paragraph(text, ParagraphStyle(
-            "HeadingInBox",
-            parent=styles["ChineseBody"],
-            textColor=GOLD,
-            fontSize=20,
-            leading=24
-        ))]], colWidths=[460]
-    )
-    tbl.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), BLACK),
-        ("LEFTPADDING", (0, 0), (-1, -1), 5),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-        ("TOPPADDING", (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-    ]))
-    return tbl
+def styled_h2(text, idx):
+    return Paragraph(f"{idx}. {text}", styles["ChineseHeading2"])
 
 # ========= 主流程 =========
 def extract_references_from_md(md_file):
@@ -184,10 +167,11 @@ def md_to_pdf(md_file, output_file="news_summary.pdf"):
 
 def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
     story = build_cover("每日生醫新聞報告", "技術導讀與學習地圖")
-    toc_entries = []  # 存 H2
-    h2_titles = []
+    toc_entries = []
+    all_titles = []
 
-    # === 先掃描並建出內容 ===
+    idx = 1  # H2 編號
+
     for block in paragraphs:
         lines = fix_markdown_headings(block.splitlines())
         buffer, list_buffer = [], []
@@ -197,9 +181,9 @@ def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
         def flush_buffer():
             nonlocal buffer
             if buffer:
-                text = " ".join(buffer).strip()
-                if text:
-                    story.append(Paragraph(convert_markdown_links(text), styles["ChineseBody"]))
+                t = " ".join(buffer).strip()
+                if t:
+                    story.append(Paragraph(convert_markdown_links(t), styles["ChineseBody"]))
                     story.append(Spacer(1, 8))
                 buffer.clear()
 
@@ -232,7 +216,9 @@ def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
             if l.startswith("# "):  # H1
                 flush_buffer(); flush_list()
                 story.append(PageBreak())
-                story.append(Spacer(1, 200))
+                bookmark = f"h1_{len(toc_entries)}"
+                story.append(Spacer(1, PAGE_HEIGHT/2 - 50))  # 垂直置中(往下推一半再減去字高)
+                story.append(Paragraph(f'<a name="{bookmark}"/>', styles["ChineseBody"]))
                 story.append(Paragraph(l[2:].strip(), ParagraphStyle(
                     "CategoryPage",
                     fontName="Biaokai",
@@ -240,17 +226,21 @@ def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
                     textColor=PRIMARY_COLOR,
                     alignment=1
                 )))
-                story.append(PageBreak())
+                # story.append(PageBreak())
+                toc_entries.append((l[2:].strip(), bookmark))
+                all_titles.append(l[2:].strip())
 
             elif l.startswith("## "):  # H2
+                story.append(PageBreak())
                 flush_buffer(); flush_list()
                 bookmark = f"h2_{len(toc_entries)}"
                 story.append(Paragraph(f'<a name="{bookmark}"/>', styles["ChineseBody"]))
-                story.append(styled_heading(l[3:].strip()))
+                story.append(styled_h2(l[3:].strip(), idx))
+                idx += 1
                 toc_entries.append((l[3:].strip(), bookmark))
-                h2_titles.append(l[3:].strip())
+                all_titles.append(l[3:].strip())
 
-            elif l.startswith("### "):  # H3
+            elif l.startswith("### "):
                 flush_buffer(); flush_list()
                 story.append(Paragraph(l[4:], styles["ChineseHeading3"]))
 
@@ -274,7 +264,6 @@ def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
 
         if in_learning: flush_learning()
         flush_buffer(); flush_list()
-        # 🔥 每篇文章後換頁
         story.append(PageBreak())
 
     # === 目錄頁放在封面後 ===
@@ -286,14 +275,17 @@ def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
         textColor=PRIMARY_COLOR,
         spaceAfter=12
     ))]
+    count = 1
     for title, bookmark in toc_entries:
-        toc_page.append(Paragraph(f'<link href="#{bookmark}">{title}</link>', styles["TOCItem"]))
-    story[1:1] = toc_page  # 插入封面後（成為第二頁）
+        toc_page.append(Paragraph(f'<link href="#{bookmark}">{count}. {title}</link>', styles["TOCItem"]))
+        count += 1
+    # story.insert(1, PageBreak())  # 確保目錄獨立在第2頁
+    story[9:9] = toc_page
 
     # === 輸出 title.txt ===
     with open("title.txt", "w", encoding="utf-8") as f:
-        f.write("\n".join(h2_titles))
-    print(f"📝 已輸出所有 H2 標題到 title.txt，共 {len(h2_titles)} 筆")
+        f.write("\n".join(all_titles))
+    print(f"📝 已輸出所有標題到 title.txt，共 {len(all_titles)} 筆")
 
     # === 建立 PDF ===
     doc = SimpleDocTemplate(

@@ -200,12 +200,13 @@ with open(md_filename, "w", encoding="utf-8") as f:
         if not articles:
             continue
         selected = articles[:MAX_PER_DOMAIN]
-        f.write(f"# {DOMAIN_NAME.get(domain, domain)}\n\n")
+        f.write(f"# {DOMAIN_NAME.get(domain, domain)}-------\n\n")
         for article in selected:
             try:
                 summary_and_opinion = generate_news_summary_and_opinion(article)
                 report = format_report(article, summary_and_opinion)
                 f.write(report + "\n\n" + "-" * 88 + "\n\n")
+                print(f"🖋️ 產生 {domain} 文章報告：{article.get('title','(無標題)')}")
             except Exception as e:
                 print(f"⚠️ 產生 {domain} 文章失敗：{article.get('title','(無標題)')} → {e}")
                 continue
