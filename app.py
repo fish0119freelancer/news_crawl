@@ -21,6 +21,8 @@ CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "")
 CHANNEL_TOKEN = os.getenv("LINE_CHANNEL_TOKEN", "")
 MAX_ARTICLES = int(os.getenv("WEBHOOK_MAX_ARTICLES", "10"))
 ARTICLE_CACHE: dict[str, list[dict[str, str]]] = {}
+PER_DOMAIN_LIMIT = int(os.getenv("WEBHOOK_PER_DOMAIN_LIMIT", "5"))
+REPORT_BASE_URL = (os.getenv("REPORT_BASE_URL") or "").rstrip("/")
 
 REPLY_ENDPOINT = "https://api.line.me/v2/bot/message/reply"
 
@@ -42,11 +44,13 @@ def _load_sources() -> list[str]:
     return [line.strip() for line in data if line.strip()]
 
 
-def _collect_articles(limit: int) -> list[dict[str, str]]:
+def _collect_articles(max_domains: int) -> list[dict[str, str]]:
     today_key = datetime.utcnow().strftime("%Y%m%d")
     cached = ARTICLE_CACHE.get(today_key)
     if cached:
-        return cached[:limit]
+        return cached
+
+    target_size = max_domains * PER_DOMAIN_LIMIT if max_domains else None
 
     root = _project_root()
     sources = _load_sources()
@@ -71,23 +75,29 @@ def _collect_articles(limit: int) -> list[dict[str, str]]:
                     image_url = (item.get("image_url") or "").strip()
                     if image_url:
                         record["image_url"] = image_url
+                    domain = (item.get("domain") or item.get("category") or "").strip()
+                    if domain:
+                        record["domain"] = domain
                     key = url or title.lower()
                     if key in seen_keys:
                         continue
                     articles.append(record)
                     seen_keys.add(key)
-                    if len(articles) >= limit:
+                    if target_size and len(articles) >= target_size:
                         break
         except Exception as exc:
             print(f"[line_webhook] Failed loading flex_articles.json: {exc}")
 
-    if len(articles) >= limit:
+    if target_size and len(articles) >= target_size:
         ARTICLE_CACHE.clear()
         ARTICLE_CACHE[today_key] = articles
-        return articles[:limit]
+        return articles[:target_size]
+    if articles:
+        ARTICLE_CACHE.clear()
+        ARTICLE_CACHE[today_key] = articles
 
     for source in sources:
-        if len(articles) >= limit:
+        if target_size and len(articles) >= target_size:
             break
         try:
             fetched = fetch_today_from_rss(source)
@@ -109,13 +119,15 @@ def _collect_articles(limit: int) -> list[dict[str, str]]:
                 bubble["image_url"] = image_url
             articles.append(bubble)
             seen_keys.add(key)
-            if len(articles) >= limit:
+            if target_size and len(articles) >= target_size:
                 break
 
     if articles:
         ARTICLE_CACHE.clear()
         ARTICLE_CACHE[today_key] = articles
 
+    if target_size:
+        return articles[:target_size]
     return articles
 
 
@@ -149,10 +161,25 @@ def _reply_line(reply_token: str, messages: list[dict[str, Any]]) -> None:
         )
 
 
+def _build_report_url(timestamp: datetime) -> str | None:
+    if not REPORT_BASE_URL:
+        return None
+    return f"{REPORT_BASE_URL}/news_summary_{timestamp.strftime('%Y%m%d')}.pdf"
+
+
 def _build_daily_message() -> dict[str, Any]:
-    articles = _collect_articles(limit=min(MAX_ARTICLES, 12))
-    alt_text = f"每日新聞 {datetime.utcnow().strftime('%Y/%m/%d')}"
-    return build_carousel_message(articles, alt_text=alt_text, limit=12)
+    max_domains = min(MAX_ARTICLES, 12)
+    articles = _collect_articles(max_domains)
+    now = datetime.utcnow()
+    alt_text = f"每日新聞 {now.strftime('%Y/%m/%d')}"
+    report_url = _build_report_url(now)
+    return build_carousel_message(
+        articles,
+        alt_text=alt_text,
+        limit=max_domains,
+        report_url=report_url,
+        per_domain_limit=PER_DOMAIN_LIMIT,
+    )
 
 
 @app.post("/api/line_webhook")

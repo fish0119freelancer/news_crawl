@@ -6,6 +6,7 @@ import json
 import os
 import re
 import sys
+from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, List
@@ -73,6 +74,14 @@ def _extract_articles(lines: Iterable[str]) -> list[dict[str, str]]:
     return articles
 
 
+DEFAULT_DOMAIN_LABEL = "其他"
+
+
+def _normalize_domain(raw: str | None) -> str:
+    domain = (raw or "").strip()
+    return domain or DEFAULT_DOMAIN_LABEL
+
+
 def _load_from_json(path: Path) -> list[dict[str, str]]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
@@ -93,10 +102,16 @@ def _load_from_json(path: Path) -> list[dict[str, str]]:
         url = (item.get("url") or "").strip()
         if not title or not url:
             continue
-        record = {"title": title, "url": url}
+        record = {
+            "title": title,
+            "url": url,
+        }
         image_url = (item.get("image_url") or "").strip()
         if image_url:
             record["image_url"] = image_url
+        domain = (item.get("domain") or item.get("category") or "").strip()
+        if domain:
+            record["domain"] = domain
         articles.append(record)
     return articles
 
@@ -115,11 +130,14 @@ def _load_from_tab_file(path: Path) -> list[dict[str, str]]:
         # Expected layout: domain \t title \t url \t image_url
         if len(parts) < 3:
             continue
+        domain = parts[0].strip()
         title = parts[1].strip()
         url = parts[2].strip()
         if not title or not url:
             continue
         record = {"title": title, "url": url}
+        if domain:
+            record["domain"] = domain
         if len(parts) > 3:
             image_url = parts[3].strip()
             if image_url:
@@ -141,55 +159,128 @@ def _truncate(text: str, limit: int = 120) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
-def _build_bubble(article: dict[str, str]) -> dict:
-    title = _truncate(article.get("title", "(無標題)"), 120)
-    button_uri = article.get("url") or "https://line.me/"
+def _group_articles_by_domain(
+    articles: list[dict[str, str]], per_domain_limit: int
+) -> list[tuple[str, list[dict[str, str]]]]:
+    grouped: OrderedDict[str, list[dict[str, str]]] = OrderedDict()
+    for article in articles:
+        domain = _normalize_domain(article.get("domain"))
+        bucket = grouped.setdefault(domain, [])
+        if len(bucket) < per_domain_limit:
+            bucket.append(article)
+    return list(grouped.items())
 
-    body_contents = [
-        {
-            "type": "text",
-            "text": title or "(無標題)",
-            "wrap": True,
-            "weight": "bold",
-            "size": "md",
-        }
-    ]
+
+def _build_domain_bubble(
+    domain: str,
+    articles: list[dict[str, str]],
+    report_url: str | None,
+) -> dict:
+    body_contents: list[dict[str, object]] = []
+
+    if not articles:
+        body_contents.append(
+            {
+                "type": "text",
+                "text": "今天沒有符合條件的文章",
+                "wrap": True,
+                "size": "sm",
+                "color": "#555555",
+            }
+        )
+    else:
+        for idx, article in enumerate(articles, 1):
+            title = _truncate(article.get("title", "(無標題)"), 80)
+            url = article.get("url") or "https://line.me/"
+            article_box = {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "xs",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": f"{idx}. {title}",
+                        "wrap": True,
+                        "size": "sm",
+                        "weight": "bold",
+                        "action": {
+                            "type": "uri",
+                            "uri": url,
+                        },
+                    },
+                    {
+                        "type": "button",
+                        "style": "link",
+                        "height": "sm",
+                        "action": {
+                            "type": "uri",
+                            "label": "閱讀全文",
+                            "uri": url,
+                        },
+                    },
+                ],
+            }
+            if idx > 1:
+                article_box["margin"] = "md"
+            image_url = article.get("image_url")
+            if image_url and idx == 1:
+                article_box["contents"].insert(
+                    1,
+                    {
+                        "type": "image",
+                        "url": image_url,
+                        "size": "full",
+                        "aspectRatio": "3:2",
+                        "aspectMode": "cover",
+                    },
+                )
+            body_contents.append(article_box)
+
+    footer_contents: list[dict[str, object]] = []
+    if report_url:
+        footer_contents.append(
+            {
+                "type": "button",
+                "style": "primary",
+                "height": "sm",
+                "action": {
+                    "type": "uri",
+                    "label": "查看報告",
+                    "uri": report_url,
+                },
+            }
+        )
 
     bubble: dict[str, object] = {
         "type": "bubble",
+        "header": {
+            "type": "box",
+            "layout": "vertical",
+            "paddingAll": "lg",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": domain,
+                    "wrap": True,
+                    "weight": "bold",
+                    "size": "lg",
+                }
+            ],
+        },
         "body": {
             "type": "box",
             "layout": "vertical",
             "spacing": "md",
             "contents": body_contents,
         },
-        "footer": {
+    }
+
+    if footer_contents:
+        bubble["footer"] = {
             "type": "box",
             "layout": "vertical",
             "spacing": "sm",
-            "contents": [
-                {
-                    "type": "button",
-                    "style": "primary",
-                    "height": "sm",
-                    "action": {
-                        "type": "uri",
-                        "label": "閱讀全文",
-                        "uri": button_uri,
-                    },
-                }
-            ],
-        },
-    }
-
-    image_url = article.get("image_url")
-    if image_url:
-        bubble["hero"] = {
-            "type": "image",
-            "url": image_url,
-            "size": "full",
-            "aspectRatio": "20:13",
-            "aspectMode": "cover",
+            "contents": footer_contents,
         }
 
     return bubble
@@ -200,6 +291,8 @@ def build_carousel_message(
     *,
     alt_text: str,
     limit: int = 12,
+    report_url: str | None = None,
+    per_domain_limit: int = 5,
 ) -> dict:
     if not articles:
         return {
@@ -207,7 +300,17 @@ def build_carousel_message(
             "text": "今天沒有符合條件的新聞唷！",
         }
 
-    bubbles = [_build_bubble(article) for article in articles[:limit]]
+    grouped = _group_articles_by_domain(articles, per_domain_limit=per_domain_limit)
+    if not grouped:
+        return {
+            "type": "text",
+            "text": "今天沒有符合條件的新聞唷！",
+        }
+
+    bubbles = [
+        _build_domain_bubble(domain, domain_articles, report_url)
+        for domain, domain_articles in grouped[:limit]
+    ]
     return {
         "type": "flex",
         "altText": alt_text,
@@ -249,6 +352,18 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         type=int,
         default=12,
         help="Maximum number of articles to include (LINE allows up to 12).",
+    )
+    parser.add_argument(
+        "--per-domain-limit",
+        type=int,
+        default=int(os.getenv("LINE_FLEX_PER_DOMAIN_LIMIT", "5")),
+        help="Maximum number of articles to keep per domain bubble.",
+    )
+    parser.add_argument(
+        "--report-url",
+        type=str,
+        default=os.getenv("LINE_FLEX_REPORT_URL"),
+        help="Shared report URL used for the 查看報告 button.",
     )
     parser.add_argument(
         "--alt-text",
@@ -305,7 +420,13 @@ def main(argv: list[str]) -> None:
         today_str = datetime.today().strftime("%Y/%m/%d")
         alt_text = f"{today_str} 每日醫療新聞共 {len(articles)} 則"
 
-    message = build_carousel_message(articles, alt_text=alt_text, limit=args.limit)
+    message = build_carousel_message(
+        articles,
+        alt_text=alt_text,
+        limit=args.limit,
+        report_url=args.report_url,
+        per_domain_limit=args.per_domain_limit,
+    )
 
     if message.get("type") == "text":
         payload = {
