@@ -80,6 +80,15 @@ def article_match(article: dict) -> tuple[bool, list[str]]:
         ok = len(hits) > 0
     return ok, hits
 
+FLEX_TITLE_PATTERN = re.compile(r"^##\s+(.+)", flags=re.MULTILINE)
+
+
+def extract_flex_title(markdown_block: str, fallback: str) -> str:
+    match = FLEX_TITLE_PATTERN.search(markdown_block or "")
+    if match:
+        return match.group(1).strip()
+    return fallback.strip()
+
 # ====== 領域定義 ======
 DOMAIN_MAP = {
     "signal": [
@@ -267,11 +276,4 @@ print(f"📄 成功來源總數：{success_sources}／{total_sources}")
 # ===== 產出 PDF =====
 md_to_pdf(md_filename, pdf_filename)
 print(f"✅ PDF 已完成：{pdf_filename}")
-FLEX_TITLE_PATTERN = re.compile(r"^##\s+(.+)", flags=re.MULTILINE)
 
-
-def extract_flex_title(markdown_block: str, fallback: str) -> str:
-    match = FLEX_TITLE_PATTERN.search(markdown_block or "")
-    if match:
-        return match.group(1).strip()
-    return fallback.strip()
