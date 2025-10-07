@@ -212,10 +212,11 @@ with open(md_filename, "w", encoding="utf-8") as f:
                 print(f"🖋️ 產生 {domain} 文章報告：{article.get('title','(無標題)')}")
 
                 url = article.get("url") or article.get("link") or ""
-                title = (article.get("title") or "").strip() or "(無標題)"
+                original_title = (article.get("title") or "").strip() or "(無標題)"
+                flex_title = extract_flex_title(report, original_title)
                 if url and url not in seen_flex_urls:
                     entry = {
-                        "title": title,
+                        "title": flex_title,
                         "url": url,
                         "domain": DOMAIN_NAME.get(domain, domain),
                     }
@@ -266,3 +267,11 @@ print(f"📄 成功來源總數：{success_sources}／{total_sources}")
 # ===== 產出 PDF =====
 md_to_pdf(md_filename, pdf_filename)
 print(f"✅ PDF 已完成：{pdf_filename}")
+FLEX_TITLE_PATTERN = re.compile(r"^##\s+(.+)", flags=re.MULTILINE)
+
+
+def extract_flex_title(markdown_block: str, fallback: str) -> str:
+    match = FLEX_TITLE_PATTERN.search(markdown_block or "")
+    if match:
+        return match.group(1).strip()
+    return fallback.strip()
