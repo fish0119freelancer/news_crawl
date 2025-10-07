@@ -26,20 +26,17 @@ jobs:
       - name: Prepare sample markdown
         run: |
           cat <<'EOF' > sample_flex_report.md
-## 測試文章一
-![封面](https://picsum.photos/seed/flex1/400/260)
-這是測試文章的摘要內容，主要用來驗證 carousel 呈現長度。
-[點我閱讀原文](https://example.com/article-1)
+          ![封面](https://picsum.photos/seed/flex1/400/260)
+          這是測試文章的摘要內容，主要用來驗證 carousel 呈現長度。
+          [點我閱讀原文](https://example.com/article-1)
 
-## 測試文章二
-![封面](https://picsum.photos/seed/flex2/400/260)
-第二篇測試文章，含有不同的描述文字，確保解析正常。
-[點我閱讀原文](https://example.com/article-2)
+          ![封面](https://picsum.photos/seed/flex2/400/260)
+          第二篇測試文章，含有不同的描述文字，確保解析正常。
+          [點我閱讀原文](https://example.com/article-2)
 
-## 測試文章三
-第三篇沒有圖片，應該生成無 hero 的 bubble。
-[點我閱讀原文](https://example.com/article-3)
-EOF
+          第三篇沒有圖片，應該生成無 hero 的 bubble。
+          [點我閱讀原文](https://example.com/article-3)
+          EOF
 
       - name: Send LINE Flex message
         env:
@@ -49,26 +46,23 @@ EOF
         run: |
           set -e
           TODAY=$(date +"%Y%m%d")
-          ALT="Flex 測試訊息 ${TODAY}"
+          OWNER=${{ github.repository_owner }}
+          REPO=${{ github.event.repository.name }}
+          URL="https://${OWNER}.github.io/${REPO}/news_summary_${TODAY}.pdf"
 
-          if [ -n "${LINE_REPLY_TOKEN}" ]; then
-            echo "Using reply mode with LINE_REPLY_TOKEN."
-            python line_flex_builder.py \
-              --mode reply \
-              --source sample_flex_report.md \
-              --alt-text "$ALT" \
-              --limit 3 \
-              --post
+          if [ -f title.txt ]; then
+            TITLES=$(nl -w2 -s'. ' title.txt)
           else
-            if [ -z "${LINE_USER_ID}" ]; then
-              echo "LINE_USER_ID secret is required for push mode." >&2
-              exit 1
-            fi
-            echo "LINE_REPLY_TOKEN not set; falling back to push mode."
-            python line_flex_builder.py \
-              --mode push \
-              --source sample_flex_report.md \
-              --alt-text "$ALT" \
-              --limit 3 \
-              --post
+            TITLES="(無標題)"
           fi
+
+          MSG="嗨!大家! 這是今天${TODAY}的每日生醫新聞報告 :\n${TITLES}\n${URL}"
+
+          PAYLOAD=$(jq -n --arg to "${{ secrets.LINE_USER_ID }}" --arg msg "$MSG" \
+            '{to:$to, messages:[{type:"text", text:$msg}]}')
+
+          curl -X POST https://api.line.me/v2/bot/message/push \
+            -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
+
