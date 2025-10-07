@@ -25,8 +25,17 @@ ARTICLE_CACHE: dict[str, list[dict[str, str]]] = {}
 REPLY_ENDPOINT = "https://api.line.me/v2/bot/message/reply"
 
 
+def _project_root() -> Path:
+    here = Path(__file__).resolve()
+    for candidate in [here.parent] + list(here.parents):
+        if (candidate / "urls.txt").exists():
+            return candidate
+    return here.parent
+
+
 def _load_sources() -> list[str]:
-    urls_file = Path(__file__).resolve().parent.parent / "urls.txt"
+    root = _project_root()
+    urls_file = root / "urls.txt"
     if not urls_file.exists():
         return []
     data = urls_file.read_text(encoding="utf-8").splitlines()
@@ -39,9 +48,43 @@ def _collect_articles(limit: int) -> list[dict[str, str]]:
     if cached:
         return cached[:limit]
 
+    root = _project_root()
     sources = _load_sources()
     articles: list[dict[str, str]] = []
-    seen_titles: set[str] = set()
+    seen_keys: set[str] = set()
+
+    flex_json = root / "flex_articles.json"
+    if flex_json.exists():
+        try:
+            raw = json.loads(flex_json.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                raw = raw.get("articles") or raw.get("items") or []
+            if isinstance(raw, list):
+                for item in raw:
+                    if not isinstance(item, dict):
+                        continue
+                    title = (item.get("title") or "").strip()
+                    url = (item.get("url") or "").strip()
+                    if not title or not url:
+                        continue
+                    record = {"title": title, "url": url}
+                    image_url = (item.get("image_url") or "").strip()
+                    if image_url:
+                        record["image_url"] = image_url
+                    key = url or title.lower()
+                    if key in seen_keys:
+                        continue
+                    articles.append(record)
+                    seen_keys.add(key)
+                    if len(articles) >= limit:
+                        break
+        except Exception as exc:
+            print(f"[line_webhook] Failed loading flex_articles.json: {exc}")
+
+    if len(articles) >= limit:
+        ARTICLE_CACHE.clear()
+        ARTICLE_CACHE[today_key] = articles
+        return articles[:limit]
 
     for source in sources:
         if len(articles) >= limit:
@@ -57,15 +100,15 @@ def _collect_articles(limit: int) -> list[dict[str, str]]:
             url = (item.get("url") or item.get("link") or "").strip()
             if not title or not url:
                 continue
-            key = title.lower()
-            if key in seen_titles:
+            key = url or title.lower()
+            if key in seen_keys:
                 continue
             bubble = {"title": title, "url": url}
             image_url = item.get("image_url")
             if image_url:
                 bubble["image_url"] = image_url
             articles.append(bubble)
-            seen_titles.add(key)
+            seen_keys.add(key)
             if len(articles) >= limit:
                 break
 
