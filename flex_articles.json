@@ -1,0 +1,122 @@
+[
+  {
+    "title": "What your brain activity says about you: A review of neuropsychiatric disorders identified in resting-state and sleep EEG data",
+    "url": "https://arxiv.org/abs/2510.04984",
+    "domain": "生理訊號 / 醫療裝置"
+  },
+  {
+    "title": "Visual Lifelog Retrieval through Captioning-Enhanced Interpretation",
+    "url": "https://arxiv.org/abs/2510.04010",
+    "domain": "生理訊號 / 醫療裝置"
+  },
+  {
+    "title": "Learning to Predict Chaos: Curriculum-Driven Training for Robust Forecasting of Chaotic Dynamics",
+    "url": "https://arxiv.org/abs/2510.04342",
+    "domain": "生理訊號 / 醫療裝置"
+  },
+  {
+    "title": "SSM-CGM: Interpretable State-Space Forecasting Model of Continuous Glucose Monitoring for Personalized Diabetes Management",
+    "url": "https://arxiv.org/abs/2510.04386",
+    "domain": "生理訊號 / 醫療裝置"
+  },
+  {
+    "title": "Forecasting-Based Biomedical Time-series Data Synthesis for Open Data and Robust AI",
+    "url": "https://arxiv.org/abs/2510.04622",
+    "domain": "生理訊號 / 醫療裝置"
+  },
+  {
+    "title": "A Biologically Interpretable Cognitive Architecture for Online Structuring of Episodic Memories into Cognitive Maps",
+    "url": "https://arxiv.org/abs/2510.03286",
+    "domain": "神經科學 / 心理學"
+  },
+  {
+    "title": "Atlas-free Brain Network Transformer",
+    "url": "https://arxiv.org/abs/2510.03306",
+    "domain": "神經科學 / 心理學"
+  },
+  {
+    "title": "Model-Guided Microstimulation Steers Primate Visual Behavior",
+    "url": "https://arxiv.org/abs/2510.03684",
+    "domain": "神經科學 / 心理學"
+  },
+  {
+    "title": "Dissecting Larval Zebrafish Hunting using Deep Reinforcement Learning Trained RNN Agents",
+    "url": "https://arxiv.org/abs/2510.03699",
+    "domain": "神經科學 / 心理學"
+  },
+  {
+    "title": "Deep Learning without Weight Symmetry",
+    "url": "https://arxiv.org/abs/2405.20594",
+    "domain": "神經科學 / 心理學"
+  },
+  {
+    "title": "Predicting cell-specific gene expression profile and knockout impact through deep learning",
+    "url": "https://arxiv.org/abs/2510.03359",
+    "domain": "AI / 數據分析"
+  },
+  {
+    "title": "TCR-EML: Explainable Model Layers for TCR-pMHC Prediction",
+    "url": "https://arxiv.org/abs/2510.04377",
+    "domain": "AI / 數據分析"
+  },
+  {
+    "title": "Bridging Clinical Narratives and ACR Appropriateness Guidelines: A Multi-Agent RAG System for Medical Imaging Decisions",
+    "url": "https://arxiv.org/abs/2510.04969",
+    "domain": "AI / 數據分析"
+  },
+  {
+    "title": "Robust multicellular programs dissect the complex tumor microenvironment and track disease progression in colorectal adenocarcinomas",
+    "url": "https://arxiv.org/abs/2510.05083",
+    "domain": "AI / 數據分析"
+  },
+  {
+    "title": "Internal World Models as Imagination Networks in Cognitive Agents",
+    "url": "https://arxiv.org/abs/2510.04391",
+    "domain": "AI / 數據分析"
+  },
+  {
+    "title": "Thin Bridges for Drug Text Alignment: Lightweight Contrastive Learning for Target Specific Drug Retrieval",
+    "url": "https://arxiv.org/abs/2510.03309",
+    "domain": "產業趨勢 / 法規"
+  },
+  {
+    "title": "GenAR: Next-Scale Autoregressive Generation for Spatial Gene Expression Prediction",
+    "url": "https://arxiv.org/abs/2510.04315",
+    "domain": "產業趨勢 / 法規"
+  },
+  {
+    "title": "Real-time Prediction of Urban Sound Propagation with Conditioned Normalizing Flows",
+    "url": "https://arxiv.org/abs/2510.04510",
+    "domain": "產業趨勢 / 法規"
+  },
+  {
+    "title": "What Lurks Within? Concept Auditing for Shared Diffusion Models at Scale",
+    "url": "https://arxiv.org/abs/2504.14815",
+    "domain": "產業趨勢 / 法規"
+  },
+  {
+    "title": "Effect of Attachment Surface on Biofilm Response and the Dissipation of PAHs and nitrogen in Submerged Plant System under the application of Bactericide and Algaecide",
+    "url": "https://arxiv.org/abs/2510.03357",
+    "domain": "生科基礎研究"
+  },
+  {
+    "title": "A flux-based approach for analyzing the disguised toric locus of reaction networks",
+    "url": "https://arxiv.org/abs/2510.03621",
+    "domain": "生科基礎研究"
+  },
+  {
+    "title": "Mapping gene expression dynamics to developmental phenotypes with information entropy analysis",
+    "url": "https://arxiv.org/abs/2510.04101",
+    "domain": "生科基礎研究"
+  },
+  {
+    "title": "SoC-DT: Standard-of-Care Aligned Digital Twins for Patient-Specific Tumor Dynamics",
+    "url": "https://arxiv.org/abs/2510.03287",
+    "domain": "生科基礎研究"
+  },
+  {
+    "title": "PEaRL: Pathway-Enhanced Representation Learning for Gene and Pathway Expression Prediction from Histology",
+    "url": "https://arxiv.org/abs/2510.03455",
+    "domain": "生科基礎研究"
+  }
+]
