@@ -1,27 +1,74 @@
-name: Test LINE Push
+name: Test Flex Builder
 
 on:
-  workflow_dispatch: # 手動觸發測試
+  workflow_dispatch: # manual trigger
 
 jobs:
-  test-line-push:
+  test-flex-message:
     runs-on: ubuntu-latest
     steps:
-      - name: Set up jq
-        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Send LINE message
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip
+          pip install pytest requests
+
+      - name: Run unit tests
+        run: pytest tests/test_line_flex_builder.py
+
+      - name: Prepare sample markdown
+        run: |
+          cat <<'EOF' > sample_flex_report.md
+## 測試文章一
+![封面](https://picsum.photos/seed/flex1/400/260)
+這是測試文章的摘要內容，主要用來驗證 carousel 呈現長度。
+[點我閱讀原文](https://example.com/article-1)
+
+## 測試文章二
+![封面](https://picsum.photos/seed/flex2/400/260)
+第二篇測試文章，含有不同的描述文字，確保解析正常。
+[點我閱讀原文](https://example.com/article-2)
+
+## 測試文章三
+第三篇沒有圖片，應該生成無 hero 的 bubble。
+[點我閱讀原文](https://example.com/article-3)
+EOF
+
+      - name: Send LINE Flex message
+        env:
+          LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
+          LINE_REPLY_TOKEN: ${{ secrets.LINE_REPLY_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+        run: |
+          set -e
           TODAY=$(date +"%Y%m%d")
-          URL="https://example.com/news_summary_${TODAY}.pdf"
-          TITLES="1. 測試新聞標題 A\n2. 測試新聞標題 B"
-          MSG="嗨!大家! 這是今天 ${TODAY} 的每日生醫新聞報告 :\n${TITLES}\n${URL}"
+          ALT="Flex 測試訊息 ${TODAY}"
 
-          PAYLOAD=$(jq -n --arg to "${{ secrets.LINE_USER_ID }}" --arg msg "$MSG" \
-            '{to:$to, messages:[{type:"text", text:$msg}]}')
-
-          echo "📤 Sending LINE push notification..."
-          curl -X POST https://api.line.me/v2/bot/message/push \
-            -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "$PAYLOAD"
+          if [ -n "${LINE_REPLY_TOKEN}" ]; then
+            echo "Using reply mode with LINE_REPLY_TOKEN."
+            python line_flex_builder.py \
+              --mode reply \
+              --source sample_flex_report.md \
+              --alt-text "$ALT" \
+              --limit 3 \
+              --post
+          else
+            if [ -z "${LINE_USER_ID}" ]; then
+              echo "LINE_USER_ID secret is required for push mode." >&2
+              exit 1
+            fi
+            echo "LINE_REPLY_TOKEN not set; falling back to push mode."
+            python line_flex_builder.py \
+              --mode push \
+              --source sample_flex_report.md \
+              --alt-text "$ALT" \
+              --limit 3 \
+              --post
+          fi

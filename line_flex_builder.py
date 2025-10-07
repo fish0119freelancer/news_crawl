@@ -1,0 +1,283 @@
+"""Utilities to build (and optionally send) LINE Flex carousel messages."""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Iterable
+
+import requests
+
+
+def _default_md_path() -> Path:
+    today_str = datetime.today().strftime("%Y%m%d")
+    return Path(f"news_report_{today_str}.md")
+
+
+def _load_lines(md_path: Path) -> list[str]:
+    try:
+        return md_path.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        raise SystemExit(f"[line_flex_builder] Markdown source not found: {md_path}")
+
+
+def _extract_articles(lines: Iterable[str]) -> list[dict[str, str]]:
+    """Parse markdown lines and collect article title/url/image."""
+    articles: list[dict[str, str]] = []
+    current: dict[str, str] | None = None
+    link_pattern = re.compile(r"\[點我閱讀原文\]\((.*?)\)")
+    image_pattern = re.compile(r"!\[.*?\]\((.*?)\)")
+
+    for raw in lines:
+        line = raw.strip()
+        if not line:
+            continue
+
+        if line.startswith("## "):
+            if current and current.get("title") and current.get("url"):
+                articles.append(current)
+            title = line[3:].strip()
+            # Remove leftover trailing markers like "-------"
+            title = re.sub(r"-{2,}$", "", title).strip()
+            current = {"title": title}
+            continue
+
+        if current is None:
+            continue
+
+        if "[點我閱讀原文]" in line:
+            match = link_pattern.search(line)
+            if match:
+                url = match.group(1).strip()
+                if url:
+                    current["url"] = url
+            continue
+
+        if line.startswith("!["):
+            match = image_pattern.search(line)
+            if match:
+                image_url = match.group(1).strip()
+                if image_url and image_url.lower() != "none":
+                    current["image_url"] = image_url
+
+    if current and current.get("title") and current.get("url"):
+        articles.append(current)
+
+    return articles
+
+
+def _truncate(text: str, limit: int = 120) -> str:
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+
+def _build_bubble(article: dict[str, str]) -> dict:
+    title = _truncate(article.get("title", "(無標題)"), 120)
+    button_uri = article.get("url") or "https://line.me/"
+
+    body_contents = [
+        {
+            "type": "text",
+            "text": title or "(無標題)",
+            "wrap": True,
+            "weight": "bold",
+            "size": "md",
+        }
+    ]
+
+    bubble: dict[str, object] = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": body_contents,
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "button",
+                    "style": "primary",
+                    "height": "sm",
+                    "action": {
+                        "type": "uri",
+                        "label": "閱讀全文",
+                        "uri": button_uri,
+                    },
+                }
+            ],
+        },
+    }
+
+    image_url = article.get("image_url")
+    if image_url:
+        bubble["hero"] = {
+            "type": "image",
+            "url": image_url,
+            "size": "full",
+            "aspectRatio": "20:13",
+            "aspectMode": "cover",
+        }
+
+    return bubble
+
+
+def build_carousel_message(
+    articles: list[dict[str, str]],
+    *,
+    alt_text: str,
+    limit: int = 12,
+) -> dict:
+    if not articles:
+        return {
+            "type": "text",
+            "text": "今天沒有符合條件的新聞唷！",
+        }
+
+    bubbles = [_build_bubble(article) for article in articles[:limit]]
+    return {
+        "type": "flex",
+        "altText": alt_text,
+        "contents": {
+            "type": "carousel",
+            "contents": bubbles,
+        },
+    }
+
+
+def _post_line(endpoint: str, payload: dict, channel_token: str) -> None:
+    resp = requests.post(
+        endpoint,
+        headers={
+            "Authorization": f"Bearer {channel_token}",
+            "Content-Type": "application/json",
+        },
+        data=json.dumps(payload),
+        timeout=10,
+    )
+    if resp.status_code >= 300:
+        raise SystemExit(
+            f"[line_flex_builder] LINE API call failed ({resp.status_code}): {resp.text}"
+        )
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Build (and optionally send) a LINE Flex carousel message from markdown."
+    )
+    parser.add_argument(
+        "--source",
+        type=Path,
+        default=_default_md_path(),
+        help="Markdown file generated by the daily pipeline.",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=12,
+        help="Maximum number of articles to include (LINE allows up to 12).",
+    )
+    parser.add_argument(
+        "--alt-text",
+        type=str,
+        default=None,
+        help="Flex message alt text. If omitted a default message will be used.",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=("reply", "push"),
+        default="reply",
+        help="Target LINE API endpoint: reply or push.",
+    )
+    parser.add_argument(
+        "--reply-token",
+        type=str,
+        default=os.getenv("LINE_REPLY_TOKEN"),
+        help="LINE reply token (required for reply mode).",
+    )
+    parser.add_argument(
+        "--to",
+        type=str,
+        default=os.getenv("LINE_USER_ID"),
+        help="LINE user/group id (required for push mode).",
+    )
+    parser.add_argument(
+        "--channel-token",
+        type=str,
+        default=os.getenv("LINE_TOKEN"),
+        help="LINE channel access token. Required when --post is used.",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Optional path to write the payload JSON.",
+    )
+    parser.add_argument(
+        "--post",
+        action="store_true",
+        help="Send the payload directly to LINE Messaging API.",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str]) -> None:
+    args = parse_args(argv)
+
+    lines = _load_lines(args.source)
+    articles = _extract_articles(lines)
+
+    if args.alt_text:
+        alt_text = args.alt_text
+    else:
+        today_str = datetime.today().strftime("%Y/%m/%d")
+        alt_text = f"{today_str} 每日醫療新聞共 {len(articles)} 則"
+
+    message = build_carousel_message(articles, alt_text=alt_text, limit=args.limit)
+
+    if message.get("type") == "text":
+        payload = {
+            "messages": [message],
+        }
+    else:
+        payload = {
+            "messages": [message],
+        }
+
+    if args.mode == "reply":
+        if not args.reply_token:
+            raise SystemExit(
+                "[line_flex_builder] reply mode requires --reply-token or LINE_REPLY_TOKEN env."
+            )
+        payload["replyToken"] = args.reply_token
+        endpoint = "https://api.line.me/v2/bot/message/reply"
+    else:
+        if not args.to:
+            raise SystemExit(
+                "[line_flex_builder] push mode requires --to or LINE_USER_ID env."
+            )
+        payload["to"] = args.to
+        endpoint = "https://api.line.me/v2/bot/message/push"
+
+    if args.output:
+        args.output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    if args.post:
+        if not args.channel_token:
+            raise SystemExit(
+                "[line_flex_builder] --post requires --channel-token or LINE_TOKEN env."
+            )
+        _post_line(endpoint, payload, args.channel_token)
+    else:
+        # Print to stdout so workflows can capture it if needed.
+        print(json.dumps(payload, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

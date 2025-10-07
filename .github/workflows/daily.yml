@@ -89,3 +89,16 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"
+      - name: Reply LINE Flex carousel
+        if: ${{ secrets.LINE_REPLY_TOKEN != '' }}
+        env:
+          LINE_REPLY_TOKEN: ${{ secrets.LINE_REPLY_TOKEN }}
+          LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
+        run: |
+          TODAY=$(date +"%Y%m%d")
+          python line_flex_builder.py \
+            --mode reply \
+            --source "news_report_${TODAY}.md" \
+            --alt-text "每日醫療新聞 ${TODAY}" \
+            --limit 12 \
+            --post
