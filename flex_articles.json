@@ -1,121 +1,121 @@
 [
   {
-    "title": "What your brain activity says about you: A review of neuropsychiatric disorders identified in resting-state and sleep EEG data",
+    "title": "你的大腦活動告訴了我們什麼：靜息狀態和睡眠腦電圖數據中神經精神疾病的識別回顧",
     "url": "https://arxiv.org/abs/2510.04984",
     "domain": "生理訊號 / 醫療裝置"
   },
   {
-    "title": "Visual Lifelog Retrieval through Captioning-Enhanced Interpretation",
+    "title": "視覺生命日誌檢索：透過字幕增強解釋",
     "url": "https://arxiv.org/abs/2510.04010",
     "domain": "生理訊號 / 醫療裝置"
   },
   {
-    "title": "Learning to Predict Chaos: Curriculum-Driven Training for Robust Forecasting of Chaotic Dynamics",
+    "title": "預測混沌：課程驅動訓練提升混沌動態的穩健預測",
     "url": "https://arxiv.org/abs/2510.04342",
     "domain": "生理訊號 / 醫療裝置"
   },
   {
-    "title": "SSM-CGM: Interpretable State-Space Forecasting Model of Continuous Glucose Monitoring for Personalized Diabetes Management",
+    "title": "可解釋的連續血糖監測狀態空間預測模型：個人化糖尿病管理的新工具",
     "url": "https://arxiv.org/abs/2510.04386",
     "domain": "生理訊號 / 醫療裝置"
   },
   {
-    "title": "Forecasting-Based Biomedical Time-series Data Synthesis for Open Data and Robust AI",
+    "title": "基於預測的生醫時間序列數據合成：開放數據與強健的人工智慧",
     "url": "https://arxiv.org/abs/2510.04622",
     "domain": "生理訊號 / 醫療裝置"
   },
   {
-    "title": "A Biologically Interpretable Cognitive Architecture for Online Structuring of Episodic Memories into Cognitive Maps",
+    "title": "一種生物可解釋的認知架構，用於在線結構化情節記憶成認知地圖",
     "url": "https://arxiv.org/abs/2510.03286",
     "domain": "神經科學 / 心理學"
   },
   {
-    "title": "Atlas-free Brain Network Transformer",
+    "title": "無需腦圖譜的腦網絡轉換器",
     "url": "https://arxiv.org/abs/2510.03306",
     "domain": "神經科學 / 心理學"
   },
   {
-    "title": "Model-Guided Microstimulation Steers Primate Visual Behavior",
+    "title": "模型引導微刺激引導靈長類視覺行為",
     "url": "https://arxiv.org/abs/2510.03684",
     "domain": "神經科學 / 心理學"
   },
   {
-    "title": "Dissecting Larval Zebrafish Hunting using Deep Reinforcement Learning Trained RNN Agents",
+    "title": "解剖幼魚斑馬魚捕獵行為：深度強化學習訓練的RNN代理",
     "url": "https://arxiv.org/abs/2510.03699",
     "domain": "神經科學 / 心理學"
   },
   {
-    "title": "Deep Learning without Weight Symmetry",
+    "title": "深度學習不需權重對稱",
     "url": "https://arxiv.org/abs/2405.20594",
     "domain": "神經科學 / 心理學"
   },
   {
-    "title": "Predicting cell-specific gene expression profile and knockout impact through deep learning",
+    "title": "預測細胞特異性基因表現譜和基因敲除影響的深度學習方法",
     "url": "https://arxiv.org/abs/2510.03359",
     "domain": "AI / 數據分析"
   },
   {
-    "title": "TCR-EML: Explainable Model Layers for TCR-pMHC Prediction",
+    "title": "TCR-EML：用於TCR-pMHC預測的可解釋模型層",
     "url": "https://arxiv.org/abs/2510.04377",
     "domain": "AI / 數據分析"
   },
   {
-    "title": "Bridging Clinical Narratives and ACR Appropriateness Guidelines: A Multi-Agent RAG System for Medical Imaging Decisions",
+    "title": "銜接臨床敘述與ACR適宜性指引：醫學影像決策的多代理RAG系統",
     "url": "https://arxiv.org/abs/2510.04969",
     "domain": "AI / 數據分析"
   },
   {
-    "title": "Robust multicellular programs dissect the complex tumor microenvironment and track disease progression in colorectal adenocarcinomas",
+    "title": "強健的多細胞程序解析複雜的腫瘤微環境並追蹤結直腸腺癌的疾病進展",
     "url": "https://arxiv.org/abs/2510.05083",
     "domain": "AI / 數據分析"
   },
   {
-    "title": "Internal World Models as Imagination Networks in Cognitive Agents",
+    "title": "內部世界模型作為認知代理中的想像網絡",
     "url": "https://arxiv.org/abs/2510.04391",
     "domain": "AI / 數據分析"
   },
   {
-    "title": "Thin Bridges for Drug Text Alignment: Lightweight Contrastive Learning for Target Specific Drug Retrieval",
+    "title": "藥物文本對齊的輕量化學習：針對目標的藥物檢索",
     "url": "https://arxiv.org/abs/2510.03309",
     "domain": "產業趨勢 / 法規"
   },
   {
-    "title": "GenAR: Next-Scale Autoregressive Generation for Spatial Gene Expression Prediction",
+    "title": "GenAR：下一代自回歸生成技術用於空間基因表達預測",
     "url": "https://arxiv.org/abs/2510.04315",
     "domain": "產業趨勢 / 法規"
   },
   {
-    "title": "Real-time Prediction of Urban Sound Propagation with Conditioned Normalizing Flows",
+    "title": "即時預測城市聲音傳播：條件正規化流的應用",
     "url": "https://arxiv.org/abs/2510.04510",
     "domain": "產業趨勢 / 法規"
   },
   {
-    "title": "What Lurks Within? Concept Auditing for Shared Diffusion Models at Scale",
+    "title": "潛藏其中的是什麼？大規模共享擴散模型的概念審計",
     "url": "https://arxiv.org/abs/2504.14815",
     "domain": "產業趨勢 / 法規"
   },
   {
-    "title": "Effect of Attachment Surface on Biofilm Response and the Dissipation of PAHs and nitrogen in Submerged Plant System under the application of Bactericide and Algaecide",
+    "title": "附著表面的影響：在淹水植物系統中生物膜對殺菌劑及藻類劑的反應及PAHs與氮的消散",
     "url": "https://arxiv.org/abs/2510.03357",
     "domain": "生科基礎研究"
   },
   {
-    "title": "A flux-based approach for analyzing the disguised toric locus of reaction networks",
+    "title": "基於流量的反應網絡偽托里克位置分析方法",
     "url": "https://arxiv.org/abs/2510.03621",
     "domain": "生科基礎研究"
   },
   {
-    "title": "Mapping gene expression dynamics to developmental phenotypes with information entropy analysis",
+    "title": "將基因表達動態映射到發育表型的資訊熵分析",
     "url": "https://arxiv.org/abs/2510.04101",
     "domain": "生科基礎研究"
   },
   {
-    "title": "SoC-DT: Standard-of-Care Aligned Digital Twins for Patient-Specific Tumor Dynamics",
+    "title": "與標準治療一致的數位雙胞胎：針對特定病患腫瘤動態的模擬",
     "url": "https://arxiv.org/abs/2510.03287",
     "domain": "生科基礎研究"
   },
   {
-    "title": "PEaRL: Pathway-Enhanced Representation Learning for Gene and Pathway Expression Prediction from Histology",
+    "title": "PEaRL：基於路徑增強的基因與路徑表達預測模型",
     "url": "https://arxiv.org/abs/2510.03455",
     "domain": "生科基礎研究"
   }
