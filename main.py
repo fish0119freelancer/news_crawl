@@ -1,5 +1,6 @@
 # main.py
 # RSS + 關鍵字篩選(可開關) + 領域分組 + 每領域最多5篇 + LLM 摘要 + PDF (含可點擊目錄)
+import json
 import os
 import re
 from datetime import datetime
@@ -195,6 +196,8 @@ for idx, url in enumerate(urls, 1):
         fail_count += 1
 
 # ===== 按領域輸出 Markdown =====
+flex_records: list[dict[str, str]] = []
+seen_flex_urls: set[str] = set()
 with open(md_filename, "w", encoding="utf-8") as f:
     for domain, articles in domain_articles.items():
         if not articles:
@@ -207,9 +210,50 @@ with open(md_filename, "w", encoding="utf-8") as f:
                 report = format_report(article, summary_and_opinion)
                 f.write(report + "\n\n" + "-" * 88 + "\n\n")
                 print(f"🖋️ 產生 {domain} 文章報告：{article.get('title','(無標題)')}")
+
+                url = article.get("url") or article.get("link") or ""
+                title = (article.get("title") or "").strip() or "(無標題)"
+                if url and url not in seen_flex_urls:
+                    entry = {
+                        "title": title,
+                        "url": url,
+                        "domain": DOMAIN_NAME.get(domain, domain),
+                    }
+                    image_url = (article.get("image_url") or "").strip()
+                    if image_url:
+                        entry["image_url"] = image_url
+                    flex_records.append(entry)
+                    seen_flex_urls.add(url)
             except Exception as e:
                 print(f"⚠️ 產生 {domain} 文章失敗：{article.get('title','(無標題)')} → {e}")
                 continue
+
+# ===== 儲存 Flex 資料 =====
+flex_json_path = Path("flex_articles.json")
+flex_txt_path = Path("flex_urls.txt")
+if flex_records:
+    flex_json_path.write_text(
+        json.dumps(flex_records, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    with open(flex_txt_path, "w", encoding="utf-8") as flex_txt:
+        for item in flex_records:
+            flex_txt.write(
+                "\t".join(
+                    [
+                        item.get("domain", ""),
+                        item.get("title", ""),
+                        item.get("url", ""),
+                        item.get("image_url", ""),
+                    ]
+                )
+                + "\n"
+            )
+    print(f"💾 已更新 {flex_json_path.name} 與 {flex_txt_path.name}")
+else:
+    flex_json_path.unlink(missing_ok=True)
+    flex_txt_path.unlink(missing_ok=True)
+    print("ℹ️ 今日無 Flex 資料可供儲存")
 
 # ===== 統計報告 =====
 print("\n📊 爬蟲完成")
