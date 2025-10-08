@@ -2,7 +2,7 @@ name: Daily News Report
 
 on:
   schedule:
-    - cron: "0 1 * * *" # 每天台灣時間 09:00 執行 (UTC+0 01:00)
+    - cron: "0 1 * * *" # 台灣時間 09:16 UTC+8
   workflow_dispatch:
 
 permissions:
@@ -13,27 +13,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout 原始碼
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # 2️⃣ 安裝 Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.9"
 
-      # 3️⃣ 安裝套件
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # 4️⃣ 產生每日新聞 PDF & Flex JSON
-      - name: Generate Daily PDF & Flex JSON
+      - name: Generate Daily PDF
         run: python main.py
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-      # 5️⃣ 確認檔案
       - name: Check generated files
         run: ls -al
 
@@ -47,7 +42,6 @@ jobs:
             exit 1
           fi
 
-      # 6️⃣ 移動到 docs (GitHub Pages)
       - name: Move PDF to docs
         run: |
           TODAY=$(date +"%Y%m%d")
@@ -55,7 +49,6 @@ jobs:
           cp "news_summary_${TODAY}.pdf" "docs/news_summary_${TODAY}.pdf"
           touch docs/.nojekyll
 
-      # 7️⃣ Commit PDF & 更新資料
       - name: Commit PDF to main/docs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -64,48 +57,40 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add "docs/news_summary_${TODAY}.pdf"
-          [ -f title.txt ] && git add title.txt
-          [ -f flex_articles.json ] && git add flex_articles.json
           git commit -m "update daily report: ${TODAY}" || echo "No changes to commit"
           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git main
 
-      # 8️⃣ 安裝 jq (組 JSON 用)
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      # 9️⃣ 推播 LINE 訊息 (Push API)
       - name: Send LINE message
-        env:
-          LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
-          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
         run: |
-          set -e
           TODAY=$(date +"%Y%m%d")
           OWNER=${{ github.repository_owner }}
           REPO=${{ github.event.repository.name }}
           URL="https://${OWNER}.github.io/${REPO}/news_summary_${TODAY}.pdf"
 
-          if [ -f flex_articles.json ]; then
-            # 如果有事先產好的 Flex JSON
-            FLEX=$(cat flex_articles.json)
-            PAYLOAD=$(jq -n \
-              --arg to "${LINE_USER_ID}" \
-              --arg alt "每日醫療新聞 ${TODAY}" \
-              --argjson contents "$FLEX" \
-              '{to:$to, messages:[{type:"flex", altText:$alt, contents:$contents}]}')
+          if [ -f title.txt ]; then
+            TITLES=$(nl -w2 -s'. ' title.txt)
           else
-            # 沒有 Flex JSON，就發純文字 + PDF 連結
-            if [ -f title.txt ]; then
-              TITLES=$(nl -w2 -s'. ' title.txt)
-            else
-              TITLES="(無標題)"
-            fi
-            MSG="嗨!大家! 這是今天${TODAY}的每日生醫新聞報告 :\n${TITLES}\n${URL}"
-            PAYLOAD=$(jq -n --arg to "${LINE_USER_ID}" --arg msg "$MSG" \
-              '{to:$to, messages:[{type:"text", text:$msg}]}')
+            TITLES="(無標題)"
           fi
 
+          # 這裡直接用真正的換行
+          MSG="嗨!大家! 這是今天${TODAY}的每日生醫新聞報告 :
+            ${TITLES}
+            ${URL}"
+
+          PAYLOAD=$(jq -n --arg to "${{ secrets.LINE_USER_ID }}" --arg msg "$MSG" \
+            '{to:$to, messages:[{type:"text", text:$msg}]}')
+
           curl -X POST https://api.line.me/v2/bot/message/push \
-            -H "Authorization: Bearer ${LINE_TOKEN}" \
+            -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
+
+
+          curl -X POST https://api.line.me/v2/bot/message/push \
+            -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"
