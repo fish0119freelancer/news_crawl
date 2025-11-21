@@ -91,3 +91,24 @@ cancer biology
 developmental biology
 metabolism
 biochemistry
+
+# ========================
+# 微生物 / 微生態
+# ========================
+microbiology
+microbiome
+microbial
+microbiota
+gut microbiota
+metagenomic
+metagenomics
+probiotic
+probiotics
+antibiotic resistance
+AMR
+bacteria
+bacterial
+fungi
+fungus
+mycobiome
+

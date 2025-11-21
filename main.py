@@ -36,6 +36,9 @@ DEFAULT_KEYWORDS = [
     # 生科基礎研究
     "cell biology", "molecular biology", "genetics", "genomics", "proteomics", "transcriptomics",
     "epigenetics", "immunology", "stem cell", "cancer biology", "developmental biology", "metabolism", "biochemistry",
+    # 微生物 / 微生態
+    "microbiology", "microbiome", "microbial", "microbiota", "gut microbiota", "metagenomic", "metagenomics",
+    "probiotic", "probiotics", "antibiotic resistance", "AMR", "bacteria", "bacterial", "fungi", "fungus", "mycobiome",
 ]
 KEYWORDS_FILE = "keywords.txt"
 KEYWORD_MODE = "OR"  # OR / AND
@@ -110,6 +113,11 @@ DOMAIN_MAP = {
         "medical imaging", "medical AI", "signal processing", "digital health",
         "telemedicine", "remote monitoring"
     ],
+    "microbe": [
+        "microbiology", "microbiome", "microbial", "microbiota", "gut microbiota",
+        "metagenomic", "metagenomics", "probiotic", "probiotics", "antibiotic resistance",
+        "amr", "bacteria", "bacterial", "fungi", "fungus", "mycobiome"
+    ],
     "industry": [
         "medtech", "healthtech", "biotech", "precision medicine", "regulatory",
         "FDA", "MDR", "TFDA", "CE mark", "market analysis"
@@ -125,6 +133,7 @@ DOMAIN_NAME = {
     "extracellular": "外泌體 / 精準醫療",
     "neuro": "神經科學 / 心理學",
     "ai": "AI / 數據分析",
+    "microbe": "微生物 / 微生態",
     "industry": "產業趨勢 / 法規",
     "basicbio": "生科基礎研究",
     "other": "其他"

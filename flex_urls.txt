@@ -1,0 +1,21 @@
+生理訊號 / 醫療裝置	What your brain activity says about you: A review of neuropsychiatric disorders identified in resting-state and sleep EEG data	https://arxiv.org/abs/2510.04984	
+生理訊號 / 醫療裝置	Visual Lifelog Retrieval through Captioning-Enhanced Interpretation	https://arxiv.org/abs/2510.04010	
+神經科學 / 心理學	A Biologically Interpretable Cognitive Architecture for Online Structuring of Episodic Memories into Cognitive Maps	https://arxiv.org/abs/2510.03286	
+神經科學 / 心理學	Atlas-free Brain Network Transformer	https://arxiv.org/abs/2510.03306	
+神經科學 / 心理學	Model-Guided Microstimulation Steers Primate Visual Behavior	https://arxiv.org/abs/2510.03684	
+神經科學 / 心理學	Dissecting Larval Zebrafish Hunting using Deep Reinforcement Learning Trained RNN Agents	https://arxiv.org/abs/2510.03699	
+神經科學 / 心理學	Deep Learning without Weight Symmetry	https://arxiv.org/abs/2405.20594	
+AI / 數據分析	Predicting cell-specific gene expression profile and knockout impact through deep learning	https://arxiv.org/abs/2510.03359	
+AI / 數據分析	TCR-EML: Explainable Model Layers for TCR-pMHC Prediction	https://arxiv.org/abs/2510.04377	
+AI / 數據分析	Bridging Clinical Narratives and ACR Appropriateness Guidelines: A Multi-Agent RAG System for Medical Imaging Decisions	https://arxiv.org/abs/2510.04969	
+AI / 數據分析	Robust multicellular programs dissect the complex tumor microenvironment and track disease progression in colorectal adenocarcinomas	https://arxiv.org/abs/2510.05083	
+AI / 數據分析	Internal World Models as Imagination Networks in Cognitive Agents	https://arxiv.org/abs/2510.04391	
+產業趨勢 / 法規	Thin Bridges for Drug Text Alignment: Lightweight Contrastive Learning for Target Specific Drug Retrieval	https://arxiv.org/abs/2510.03309	
+產業趨勢 / 法規	GenAR: Next-Scale Autoregressive Generation for Spatial Gene Expression Prediction	https://arxiv.org/abs/2510.04315	
+產業趨勢 / 法規	Real-time Prediction of Urban Sound Propagation with Conditioned Normalizing Flows	https://arxiv.org/abs/2510.04510	
+產業趨勢 / 法規	What Lurks Within? Concept Auditing for Shared Diffusion Models at Scale	https://arxiv.org/abs/2504.14815	
+生科基礎研究	Effect of Attachment Surface on Biofilm Response and the Dissipation of PAHs and nitrogen in Submerged Plant System under the application of Bactericide and Algaecide	https://arxiv.org/abs/2510.03357	
+生科基礎研究	A flux-based approach for analyzing the disguised toric locus of reaction networks	https://arxiv.org/abs/2510.03621	
+生科基礎研究	Mapping gene expression dynamics to developmental phenotypes with information entropy analysis	https://arxiv.org/abs/2510.04101	
+生科基礎研究	SoC-DT: Standard-of-Care Aligned Digital Twins for Patient-Specific Tumor Dynamics	https://arxiv.org/abs/2510.03287	
+生科基礎研究	PEaRL: Pathway-Enhanced Representation Learning for Gene and Pathway Expression Prediction from Histology	https://arxiv.org/abs/2510.03455	
