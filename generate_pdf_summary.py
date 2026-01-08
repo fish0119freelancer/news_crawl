@@ -1,6 +1,8 @@
 import os
 import re
+import json
 from datetime import datetime
+from pathlib import Path
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, ListFlowable, ListItem,
     PageBreak, Table, TableStyle, Image
@@ -63,6 +65,14 @@ styles.add(ParagraphStyle(
     name="TOCItem", fontName="Biaokai", fontSize=12, leading=16,
     leftIndent=20, textColor=PRIMARY_COLOR
 ))
+styles.add(ParagraphStyle(
+    name="FeaturedTitle", fontName="Biaokai", fontSize=18, leading=22,
+    textColor=GOLD, spaceBefore=20, spaceAfter=10, alignment=1
+))
+styles.add(ParagraphStyle(
+    name="FeaturedItem", fontName="Biaokai", fontSize=11, leading=16,
+    leftIndent=10, textColor=PRIMARY_COLOR, spaceAfter=4
+))
 
 # ========= 背景與頁碼 =========
 def add_page_background(canvas, doc):
@@ -120,6 +130,37 @@ def fix_markdown_headings(lines):
 
 def convert_markdown_links(t):
     return re.sub(r"\[(.*?)\]\((.*?)\)", r'<a href="\2">\1</a>', t)
+
+
+def _generate_legacy_title_txt(toc_entries):
+    """舊版 title.txt 產生邏輯（備用）"""
+    formatted_titles = []
+    h1_count = 0
+    h2_count = 0
+
+    def to_roman(n):
+        val = [(10, 'x'), (9, 'ix'), (5, 'v'), (4, 'iv'), (1, 'i')]
+        result = ''
+        for (magnitude, symbol) in val:
+            while n >= magnitude:
+                result += symbol
+                n -= magnitude
+        return result
+
+    for title, bookmark in toc_entries:
+        if bookmark.startswith("h1_"):
+            h1_count += 1
+            h2_count = 0
+            formatted_titles.append(f"{h1_count}. {title}")
+        elif bookmark.startswith("h2_"):
+            h2_count += 1
+            roman = to_roman(h2_count)
+            formatted_titles.append(f"   {roman}. {title}")
+
+    with open("title.txt", "w", encoding="utf-8") as f:
+        f.write("\n".join(formatted_titles))
+    print(f"📝 已輸出所有標題到 title.txt，共 {len(formatted_titles)} 筆")
+
 
 def build_cover(title, subtitle):
     cover = []
@@ -282,10 +323,75 @@ def generate_pdf(paragraphs, references=None, output_file="news_summary.pdf"):
     # story.insert(1, PageBreak())  # 確保目錄獨立在第2頁
     story[9:9] = toc_page
 
-    # === 輸出 title.txt ===
-    with open("title.txt", "w", encoding="utf-8") as f:
-        f.write("\n".join(all_titles))
-    print(f"📝 已輸出所有標題到 title.txt，共 {len(all_titles)} 筆")
+    # === 從 flex_articles.json 讀取資料來產生「本日精選」和 title.txt ===
+    flex_json_path = Path("flex_articles.json")
+    LINE_TOP_PER_DOMAIN = 2  # LINE 訊息每領域顯示前幾則
+    
+    if flex_json_path.exists():
+        try:
+            flex_data = json.loads(flex_json_path.read_text(encoding="utf-8"))
+            
+            # 按評分排序取 Top 5 作為「本日精選」
+            sorted_all = sorted(flex_data, key=lambda x: x.get("score", 0), reverse=True)
+            top_featured = sorted_all[:5]
+            
+            # 在目錄後插入「📌 本日精選」專區
+            featured_section = []
+            featured_section.append(Spacer(1, 20))
+            featured_section.append(Paragraph("🌟 本日精選", styles["FeaturedTitle"]))
+            featured_section.append(Spacer(1, 10))
+            for i, item in enumerate(top_featured, 1):
+                score = item.get("score", 5.0)
+                title = item.get("title", "(無標題)")
+                url = item.get("url", "")
+                domain = item.get("domain", "")
+                featured_section.append(Paragraph(
+                    f'⭐ {score:.1f} 【{domain}】{title}',
+                    styles["FeaturedItem"]
+                ))
+                if url:
+                    featured_section.append(Paragraph(
+                        f'<a href="{url}">點此開啟原文</a>',
+                        styles["FeaturedItem"]
+                    ))
+            featured_section.append(Spacer(1, 20))
+            featured_section.append(PageBreak())
+            
+            # 插入到目錄之後
+            toc_end_index = 9 + len(toc_page)
+            story[toc_end_index:toc_end_index] = featured_section
+            
+            # === 產生 title.txt（每領域取前 2 則 + 連結 + 評分）===
+            from collections import OrderedDict
+            domain_groups: OrderedDict[str, list] = OrderedDict()
+            for item in flex_data:
+                domain = item.get("domain", "其他")
+                domain_groups.setdefault(domain, []).append(item)
+            
+            formatted_titles = []
+            h1_count = 0
+            for domain, items in domain_groups.items():
+                h1_count += 1
+                formatted_titles.append(f"{h1_count}. {domain}")
+                # 取前 N 則（已按評分排序）
+                for i, item in enumerate(items[:LINE_TOP_PER_DOMAIN], 1):
+                    score = item.get("score", 5.0)
+                    title = item.get("title", "(無標題)")
+                    url = item.get("url", "")
+                    formatted_titles.append(f"   ⭐{score:.1f} {title}")
+                    if url:
+                        formatted_titles.append(f"   {url}")
+            
+            with open("title.txt", "w", encoding="utf-8") as f:
+                f.write("\n".join(formatted_titles))
+            print(f"📝 已輸出 LINE 用標題到 title.txt，共 {len(domain_groups)} 個領域")
+            
+        except Exception as e:
+            print(f"⚠️ 讀取 flex_articles.json 失敗：{e}，使用舊版 title.txt 產生邏輯")
+            _generate_legacy_title_txt(toc_entries)
+    else:
+        print("ℹ️ 找不到 flex_articles.json，使用舊版 title.txt 產生邏輯")
+        _generate_legacy_title_txt(toc_entries)
 
     # === 建立 PDF ===
     doc = SimpleDocTemplate(

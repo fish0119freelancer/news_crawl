@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from summarize_with_llm import generate_news_summary_and_opinion, llm_batch_summarize
+from summarize_with_llm import generate_news_summary_and_opinion, llm_batch_summarize, extract_score_from_response
 from report_generator import format_report
 from fetch_articles import fetch_today_from_rss
 from generate_pdf_summary import md_to_pdf
@@ -14,6 +14,7 @@ from generate_pdf_summary import md_to_pdf
 # ====== FLAG：是否啟用關鍵字篩選 ======
 USE_KEYWORDS = True   # True 啟用關鍵字篩選，False 全部文章都會處理
 MAX_PER_DOMAIN = 5    # 每個領域最多處理幾篇
+LINE_TOP_PER_DOMAIN = 2  # LINE 訊息每領域顯示前幾則
 
 # ====== 關鍵字設定（可用 keywords.txt 覆蓋） ======
 DEFAULT_KEYWORDS = [
@@ -221,31 +222,46 @@ with open(md_filename, "w", encoding="utf-8") as f:
         if not articles:
             continue
         selected = articles[:MAX_PER_DOMAIN]
-        f.write(f"# {DOMAIN_NAME.get(domain, domain)}-------\n\n")
+        
+        # 先收集所有文章的摘要和評分
+        processed_articles = []
         for article in selected:
             try:
                 summary_and_opinion = generate_news_summary_and_opinion(article)
-                report = format_report(article, summary_and_opinion)
-                f.write(report + "\n\n" + "-" * 88 + "\n\n")
-                print(f"🖋️ 產生 {domain} 文章報告：{article.get('title','(無標題)')}")
-
-                url = article.get("url") or article.get("link") or ""
-                original_title = (article.get("title") or "").strip() or "(無標題)"
-                flex_title = extract_flex_title(report, original_title)
-                if url and url not in seen_flex_urls:
-                    entry = {
-                        "title": flex_title,
-                        "url": url,
-                        "domain": DOMAIN_NAME.get(domain, domain),
-                    }
-                    image_url = (article.get("image_url") or "").strip()
-                    if image_url:
-                        entry["image_url"] = image_url
-                    flex_records.append(entry)
-                    seen_flex_urls.add(url)
+                score = extract_score_from_response(summary_and_opinion)
+                article["_score"] = score
+                article["_summary"] = summary_and_opinion
+                processed_articles.append(article)
+                print(f"🖋️ 產生 {domain} 文章報告：{article.get('title','(無標題)')} ⭐{score}")
             except Exception as e:
                 print(f"⚠️ 產生 {domain} 文章失敗：{article.get('title','(無標題)')} → {e}")
                 continue
+        
+        # 按評分排序（高到低）
+        processed_articles.sort(key=lambda x: x.get("_score", 0), reverse=True)
+        
+        # 寫入 Markdown（按評分排序）
+        f.write(f"# {DOMAIN_NAME.get(domain, domain)}-------\n\n")
+        for article in processed_articles:
+            summary_and_opinion = article["_summary"]
+            report = format_report(article, summary_and_opinion)
+            f.write(report + "\n\n" + "-" * 88 + "\n\n")
+            
+            url = article.get("url") or article.get("link") or ""
+            original_title = (article.get("title") or "").strip() or "(無標題)"
+            flex_title = extract_flex_title(report, original_title)
+            if url and url not in seen_flex_urls:
+                entry = {
+                    "title": flex_title,
+                    "url": url,
+                    "domain": DOMAIN_NAME.get(domain, domain),
+                    "score": article.get("_score", 5.0),
+                }
+                image_url = (article.get("image_url") or "").strip()
+                if image_url:
+                    entry["image_url"] = image_url
+                flex_records.append(entry)
+                seen_flex_urls.add(url)
 
 # ===== 儲存 Flex 資料 =====
 flex_json_path = Path("flex_articles.json")
