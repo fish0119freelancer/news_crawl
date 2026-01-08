@@ -71,7 +71,7 @@ jobs:
           URL="https://${OWNER}.github.io/${REPO}/news_summary_${TODAY}.pdf"
 
           if [ -f title.txt ]; then
-            TITLES=$(nl -w2 -s'. ' title.txt)
+            TITLES=$(cat title.txt)
           else
             TITLES="(無標題)"
           fi
