@@ -15,6 +15,8 @@ from generate_pdf_summary import md_to_pdf
 USE_KEYWORDS = True   # True 啟用關鍵字篩選，False 全部文章都會處理
 MAX_PER_DOMAIN = 5    # 每個領域最多處理幾篇
 LINE_TOP_PER_DOMAIN = 2  # LINE 訊息每領域顯示前幾則
+# 回看天數：每日新聞，1 = 今天+昨天（preprint 每日高產出會填滿；期刊/法規當天有發才進）。
+LOOKBACK_DAYS = 1
 
 # ====== 關鍵字設定（可用 keywords.txt 覆蓋） ======
 DEFAULT_KEYWORDS = [
@@ -177,7 +179,7 @@ domain_articles["other"] = []
 for idx, url in enumerate(urls, 1):
     try:
         print(f"\n📡 [{idx}/{total_sources}] 掃描來源：{url}")
-        today_articles = fetch_today_from_rss(url)
+        today_articles = fetch_today_from_rss(url, lookback_days=LOOKBACK_DAYS)
         if not today_articles:
             print(f"⚠️ 今日無新文章：{url}")
             continue

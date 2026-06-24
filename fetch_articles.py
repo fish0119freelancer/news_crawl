@@ -6,6 +6,7 @@ from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 import warnings
 from bs4 import XMLParsedAsHTMLWarning
+from email.utils import parsedate_to_datetime
 import re
 
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
@@ -23,12 +24,21 @@ def parse_rss_date(date_str: str) -> datetime:
         "%a, %d %b %Y %H:%M:%S %z",
         "%Y-%m-%dT%H:%M:%SZ",
         "%Y-%m-%dT%H:%M:%S%z",
-        "%Y-%m-%d"
+        "%Y-%m-%d",
+        "%b %d, %Y %I:%M%p",   # fiercebiotech: "Jun 23, 2026 2:11pm"
+        "%b %d, %Y",
     ):
         try:
             return datetime.strptime(date_str, fmt)
         except ValueError:
             continue
+    # fallback：email.utils 吃 RFC2822，含 EDT/PST/GMT 等時區縮寫（FDA 用 EDT）
+    try:
+        dt = parsedate_to_datetime(date_str)
+        if dt is not None:
+            return dt
+    except (ValueError, TypeError):
+        pass
     raise ValueError(f"無法解析日期格式：{date_str}")
 
 def extract_image_from_item(item):
@@ -61,23 +71,35 @@ def extract_image_from_item(item):
 
     return None
 
-def fetch_today_from_rss(rss_url=RSS_URL):
+def fetch_today_from_rss(rss_url=RSS_URL, lookback_days: int = 1):
+    """抓取 RSS/Atom；只保留 pub_date 落在「今天往前 lookback_days 天」內的文章。
+    lookback_days=1 → 今天+昨天（預設，向後相容）；
+    權威來源（期刊/法規）發布頻率低，建議拉大（見 main.py LOOKBACK_DAYS）。"""
     headers = {"User-Agent": "Mozilla/5.0 (compatible; NewsBot/1.0)"}
     resp = session.get(rss_url, headers=headers, timeout=20)
     resp.raise_for_status()
 
     soup = BeautifulSoup(resp.text, "xml")
-    items = soup.find_all("item")
-    
+    # RSS 用 <item>，Atom 用 <entry>（PLOS、部分 Frontiers）
+    items = soup.find_all("item") or soup.find_all("entry")
+
     today = datetime.now().date()
-    yesterday = today - timedelta(days=1)
+    earliest = today - timedelta(days=max(0, lookback_days))
 
     articles = []
     for item in items:
-        link = item.find("link").get_text(strip=True) if item.find("link") else None
+        link_tag = item.find("link")
+        # RSS: <link>url</link>；Atom: <link href="url"/>
+        link = None
+        if link_tag:
+            link = link_tag.get_text(strip=True) or link_tag.get("href")
         title = item.find("title").get_text(strip=True) if item.find("title") else "(無標題)"
-        description = item.find("description").get_text(strip=True) if item.find("description") else ""
-        pub_date_tag = item.find("pubDate") or item.find("dc:date")
+        desc_tag = item.find("description") or item.find("summary")
+        description = desc_tag.get_text(strip=True) if desc_tag else ""
+        # 日期 tag 大小寫不敏感（Frontiers 用小寫 <pubdate>）
+        # RSS: pubDate / dc:date；Atom: published / updated
+        pub_date_tag = item.find(re.compile(
+            r"^(pubdate|dc:date|date|published|updated)$", re.IGNORECASE))
         image_url = extract_image_from_item(item)
 
         if not link or not pub_date_tag:
@@ -85,7 +107,7 @@ def fetch_today_from_rss(rss_url=RSS_URL):
 
         try:
             pub_dt = parse_rss_date(pub_date_tag.get_text(strip=True))
-            if pub_dt.date() in (today, yesterday):
+            if earliest <= pub_dt.date() <= today:
                 articles.append({
                     "title": title,
                     "summary": description,
