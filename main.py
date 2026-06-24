@@ -1,5 +1,12 @@
 # main.py
 # RSS + 關鍵字篩選(可開關) + 領域分組 + 每領域最多5篇 + LLM 摘要 + PDF (含可點擊目錄)
+import sys
+# Windows cp950 主控台直接印 emoji 會 UnicodeEncodeError，強制 stdout/stderr 走 UTF-8
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+except Exception:
+    pass
 import json
 import os
 import re
