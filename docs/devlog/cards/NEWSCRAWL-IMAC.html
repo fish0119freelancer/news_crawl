@@ -1,0 +1,18 @@
+<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NEWSCRAWL-IMAC</title>
+<style>body{font:15px/1.6 system-ui;max-width:760px;margin:2rem auto;padding:0 16px;color:#222}h2{border-bottom:1px solid #ddd;padding-top:.6rem}code{background:#f3f3f3;padding:1px 4px}td,th{border:1px solid #ccc;padding:4px 8px}table{border-collapse:collapse}</style>
+<h1>NEWSCRAWL-IMAC：每日新聞搬到 iMac launchd</h1>
+<h2>① 問題</h2><p>GitHub Actions 因 Ubuntu 26.04 沒有 Python 3.9 失敗（11/17 起停擺）。改在 iMac 用 launchd 每天台北 09:00 跑，同樣產 PDF、推 docs/、送 LINE。</p>
+<h2>② 流程（改後）</h2>
+<pre class="mermaid">flowchart LR
+L[launchd 09:00] --> R[run_daily.sh]
+R --> K[keychain 讀 3 secrets]
+K --> P[git pull]
+P --> M[main.py 產 PDF]
+M --> C[複製 docs/ → commit+push]
+C -->|push 失敗只記 log| N[LINE 推播一次]</pre>
+<script type="module">import m from"https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs";m.initialize({startOnLoad:true})</script>
+<h2>③ 決策點</h2><ul><li>secrets 只走 keychain（service=<code>news_crawl</code>）；token 經 stdin 給 curl，不入命令列／log。</li><li>push 失敗不擋 LINE（使用者先收到報告，之後手動補推）。</li><li>只在 main 分支才 commit/push，避免在開發分支誤推。</li><li>LINE 只送一次＋當日旗標防重複（原 workflow 重複送兩次是 bug）。</li><li>DRY_RUN=1 在 LLM 層短路，免 key 驗證整條管線。</li><li>已知坑：launchd 不會自建 log 目錄；排程在 Mac 睡眠時錯過會於喚醒補跑。</li></ul>
+<h2>④ 證據</h2><table><tr><th>項目</th><th>結果</th><th>證明什麼</th></tr><tr><td>python3.12 venv 裝 requirements</td><td>成功，免改碼</td><td>無相容問題</td></tr><tr><td>DRY_RUN 乾跑</td><td>31 s、17/30 來源、128 篇、PDF 168KB、0 失敗</td><td>管線完整可跑</td></tr><tr><td>sabotage 缺 OPENAI key</td><td>exit 2</td><td>缺 secret 會明確失敗</td></tr><tr><td>sabotage main.py 失敗</td><td>exit 3</td><td>錯誤不被吞</td></tr></table>
+<h2>⑤ 成效與限制</h2><p>有效：腳本、plist、workflow schedule 已停。未驗證：真實 launchd 觸發、git push（SSH 免密碼？）、LINE 實送——待 keychain 放入 3 個 secret。</p>
+<h2>⑥ 兩種講法</h2><p><b>RD：</b>launchd→run_daily.sh，keychain 取 secret，pull→main.py→docs commit/push（失敗不擋）→LINE 一次；DRY_RUN 可免 key 驗證。<br><b>一般人：</b>每天早上 9 點改由這台 iMac 自動產生新聞報告並推給大家。</p>
+</html>

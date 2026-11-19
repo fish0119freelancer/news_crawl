@@ -1,7 +1,9 @@
 from openai import OpenAI
 import os
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# DRY_RUN=1：不呼叫 OpenAI（不需 key、不花錢），回傳罐頭摘要，用來驗證整條管線
+DRY_RUN = os.getenv("DRY_RUN") == "1"
+client = None if DRY_RUN else OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 import re
 
@@ -23,6 +25,13 @@ def extract_score_from_response(response_text: str) -> float:
 
 # 單篇文章處理
 def generate_news_summary_and_opinion(article):
+    if DRY_RUN:
+        return (
+            f"## [DRY RUN] {article.get('title', '(無標題)')}\n\n"
+            "### 評分\n⭐ 5.0 分\n\n### 摘要\n（乾跑，未呼叫 LLM）\n\n"
+            "### 這篇在說什麼？\n（乾跑）\n\n### 學習路徑\nA → B → C\n\n"
+            f"### 原文連結\n[點擊連結]({article.get('url', '')})\n"
+        )
     prompt = f"""
 你是一位「生醫跨領域提倡者」，需要幫助讀者快速理解最新生醫/醫工文章。
 

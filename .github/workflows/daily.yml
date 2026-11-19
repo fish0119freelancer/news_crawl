@@ -1,8 +1,9 @@
 name: Daily News Report
 
 on:
-  schedule:
-    - cron: "0 1 * * *" # 台灣時間 09:16 UTC+8
+  # 改由 iMac launchd 執行
+  # schedule:
+  #   - cron: "0 1 * * *" # 台灣時間 09:16 UTC+8
   workflow_dispatch:
 
 permissions:
