@@ -88,8 +88,3 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"
-
-          curl -X POST https://api.line.me/v2/bot/message/push \
-            -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "$PAYLOAD"
