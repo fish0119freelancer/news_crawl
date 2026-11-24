@@ -13,14 +13,15 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from summarize_with_llm import generate_news_summary_and_opinion, llm_batch_summarize, extract_score_from_response
+import cost_guard
+from summary_runner import exit_code_for, run_summaries
 from report_generator import format_report
 from fetch_articles import fetch_today_from_rss
 from generate_pdf_summary import md_to_pdf
 
 # ====== FLAG：是否啟用關鍵字篩選 ======
 USE_KEYWORDS = True   # True 啟用關鍵字篩選，False 全部文章都會處理
-MAX_PER_DOMAIN = 5    # 每個領域最多處理幾篇
+MAX_PER_DOMAIN = int(os.getenv("MAX_PER_DOMAIN", "5"))    # 每個領域最多處理幾篇
 LINE_TOP_PER_DOMAIN = 2  # LINE 訊息每領域顯示前幾則
 # 回看天數：每日新聞，1 = 今天+昨天（preprint 每日高產出會填滿；期刊/法規當天有發才進）。
 LOOKBACK_DAYS = 1
@@ -223,39 +224,41 @@ for idx, url in enumerate(urls, 1):
         print(f"❌ 來源處理失敗：{url} → {source_err}")
         fail_count += 1
 
+# ===== 執行各領域摘要 =====
+processed_by_domain, summary_stats = run_summaries(domain_articles, MAX_PER_DOMAIN)
+print(
+    f"📝 摘要成功 {summary_stats.summary_ok}、"
+    f"失敗 {summary_stats.summary_fail}、"
+    f"略過(額度) {summary_stats.summary_skipped}"
+)
+print(cost_guard.guard.summary_line())
+
+exit_code = exit_code_for(summary_stats)
+if exit_code != 0:
+    print("::error::所有選取文章的摘要皆失敗（summary_ok=0），中止產出 PDF 與 Flex 資料")
+    sys.exit(exit_code)
+
+if summary_stats.summary_fail > 0:
+    print(
+        f"::warning::部分文章摘要失敗（失敗 {summary_stats.summary_fail} 篇、"
+        f"成功 {summary_stats.summary_ok} 篇），仍照常產出 PDF"
+    )
+
 # ===== 按領域輸出 Markdown =====
 flex_records: list[dict[str, str]] = []
 seen_flex_urls: set[str] = set()
 with open(md_filename, "w", encoding="utf-8") as f:
-    for domain, articles in domain_articles.items():
-        if not articles:
+    for domain, processed_articles in processed_by_domain.items():
+        if not processed_articles:
             continue
-        selected = articles[:MAX_PER_DOMAIN]
-        
-        # 先收集所有文章的摘要和評分
-        processed_articles = []
-        for article in selected:
-            try:
-                summary_and_opinion = generate_news_summary_and_opinion(article)
-                score = extract_score_from_response(summary_and_opinion)
-                article["_score"] = score
-                article["_summary"] = summary_and_opinion
-                processed_articles.append(article)
-                print(f"🖋️ 產生 {domain} 文章報告：{article.get('title','(無標題)')} ⭐{score}")
-            except Exception as e:
-                print(f"⚠️ 產生 {domain} 文章失敗：{article.get('title','(無標題)')} → {e}")
-                continue
-        
-        # 按評分排序（高到低）
-        processed_articles.sort(key=lambda x: x.get("_score", 0), reverse=True)
-        
-        # 寫入 Markdown（按評分排序）
+
+        # 寫入 Markdown（已按評分排序）
         f.write(f"# {DOMAIN_NAME.get(domain, domain)}-------\n\n")
         for article in processed_articles:
             summary_and_opinion = article["_summary"]
             report = format_report(article, summary_and_opinion)
             f.write(report + "\n\n" + "-" * 88 + "\n\n")
-            
+
             url = article.get("url") or article.get("link") or ""
             original_title = (article.get("title") or "").strip() or "(無標題)"
             flex_title = extract_flex_title(report, original_title)

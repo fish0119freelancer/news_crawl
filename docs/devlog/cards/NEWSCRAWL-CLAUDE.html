@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="card-id" content="NEWSCRAWL-CLAUDE">
+<meta name="card-project" content="news_crawl">
+<meta name="card-type" content="feature">
+<meta name="card-status" content="done">
+<meta name="card-date" content="2026-11-23">
+<meta name="card-tags" content="">
+<meta name="card-lang" content="zh">
+  <title>卡片紀錄｜news_crawl 摘要改用 Claude API</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --text: #172033;
+      --muted: #64748b;
+      --line: #d9e0ea;
+      --accent: #2563eb;
+      --code: #eef2ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 2rem 1rem 4rem;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main { max-width: 960px; margin: 0 auto; }
+    header.card-header, section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 5px 18px rgba(30, 41, 59, .06);
+    }
+    header.card-header { padding: 1.5rem; margin-bottom: 1rem; }
+    h1, h2, p { margin-top: 0; }
+    h1 { margin-bottom: .35rem; font-size: clamp(1.65rem, 4vw, 2.4rem); }
+    .meta { color: var(--muted); margin-bottom: .55rem; }
+    .card-state { font-weight: 600; }
+    .tag {
+      display: inline-block;
+      margin: .2rem .35rem .2rem 0;
+      padding: .1rem .55rem;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--accent) 14%, transparent);
+      color: var(--accent);
+      font-size: .85rem;
+    }
+    section { margin: 1rem 0; overflow: hidden; }
+    .cell-heading {
+      display: flex;
+      align-items: baseline;
+      gap: .8rem;
+      padding: .85rem 1.1rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .cell-heading h2 { margin: 0; font-size: 1.15rem; }
+    .cell-heading span { color: var(--muted); font-size: .9rem; }
+    .cell-content { padding: 1.05rem 1.1rem; overflow-x: auto; }
+    .cell-content p:last-child { margin-bottom: 0; }
+    .card-field { margin: 0 0 1.1rem; }
+    .card-field:last-child { margin-bottom: 0; }
+    .card-field h3 { margin: 0 0 .45rem; font-size: 1rem; color: var(--muted); }
+    .field-content { overflow-x: auto; }
+    .card-events { padding-bottom: 1.1rem; }
+    .card-event { padding: .9rem 1.1rem; border-bottom: 1px solid var(--line); }
+    .card-event:last-child { border-bottom: 0; }
+    .card-event-meta { color: var(--muted); font-size: .9rem; margin-bottom: .35rem; }
+    .placeholder {
+      display: inline-block;
+      padding: .45rem .7rem;
+      border: 1px dashed var(--accent);
+      border-radius: 8px;
+      color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 8%, transparent);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .guided-placeholder {
+      display: block;
+      width: 100%;
+      font-family: inherit;
+    }
+    .guided-placeholder table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: .75rem 0;
+    }
+    .guided-placeholder th, .guided-placeholder td {
+      border: 1px solid var(--line);
+      padding: .5rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    pre {
+      margin: 0;
+      padding: 1rem;
+      overflow-x: auto;
+      border-radius: 9px;
+      background: var(--code);
+      white-space: pre-wrap;
+    }
+    img, video { max-width: 100%; height: auto; border-radius: 8px; vertical-align: middle; }
+    video { background: #000; }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a;
+        --panel: #172033;
+        --text: #e5e7eb;
+        --muted: #aab6c8;
+        --line: #334155;
+        --accent: #93c5fd;
+        --code: #0b1220;
+      }
+      header.card-header, section { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="card-header">
+      <h1>news_crawl 摘要改用 Claude API</h1>
+      <div class="meta">ID NEWSCRAWL-CLAUDE · 專案 news_crawl · 類型 feature · 狀態 pending · 日期 2026-11-23 · 卡片狀態 <span class="card-state" data-state="open">open</span></div>
+      <div class="tags"></div>
+    </header>
+    <section data-cell="problem">
+      <div class="cell-heading">
+        <h2>①問題</h2>
+        <span>① Problem</span>
+      </div>
+      <div class="cell-content">
+        <div data-field="problem" class="card-field">
+  <h3>問題與為何現在 / Problem &amp; why now</h3>
+  <div class="field-content"><p>news_crawl 每天從 30 個 RSS 抓文章，關鍵字命中約 128 篇（11/19 乾跑）；但只有每個領域前 5 篇（MAX_PER_DOMAIN=5，7 個領域，最多約 35 篇）會送 LLM 摘要並進 PDF，LINE 推 12 篇。owner 11/23：①只做 PDF 那些就好 ②改用 claude -p（帳號 A extra credit），不用 API key ③要好內容 ④之後付費會員可自訂關鍵字，後台把所有人的關鍵字聯集一起爬、一起整理，要好維護。</p>
+  <p><strong>D212 B：改走 GitHub Actions＋Claude API：</strong>11/23 方案嘗試以 <code>claude -p</code> 執行，但 CI（GitHub Actions）環境無 Claude 登入憑證；經決策 D212 選擇方案 B，改採官方 Anthropic SDK 搭配 API Key，維持於 GitHub Actions 每日自動執行，並引入嚴格費用防護。</p></div>
+</div>
+        <div data-field="context" class="card-field">
+  <h3>脈絡與限制（含非目標） / Context &amp; constraints</h3>
+  <div class="field-content"><p>本次範圍是把摘要 backend 改由 <code>claude -p</code>（Sonnet）執行，驗證格式解析、快取、重試、失敗跳過與 OpenAI fallback；非目標是本卡以外的 CI 登入、iMac launchd、LINE 實送、會員關鍵字聯集，以及與舊 gpt-4o 的同篇品質重跑。</p></div>
+</div>
+        <div data-field="hypotheses" class="card-field">
+  <h3>假設全集（含被推翻者） / Hypotheses</h3>
+  <div class="field-content"><p>預期在沒有 OpenAI API key 時仍可透過已登入的 Claude Code 呼叫摘要；同一 URL 第二次應命中快取而不重複呼叫；逾時應重試一次，兩次都失敗則由既有流程跳過該篇；OpenAI client 應維持可切換且採 lazy 初始化。</p></div>
+</div>
+      </div>
+    </section>
+    <section data-cell="flow">
+      <div class="cell-heading">
+        <h2>②流程圖</h2>
+        <span>② Flow</span>
+      </div>
+      <div class="cell-content">
+        <div data-field="flow" class="card-field">
+  <h3>流程圖 / Flow</h3>
+  <div class="field-content"><p class="flow-fallback">此圖語法未支援預渲染，請看原始碼。</p>
+<details class="flow-source" open><summary>Mermaid 原始碼</summary><pre class="mermaid">```mermaid
+flowchart LR
+  A[30 RSS] --&gt; B[關鍵字命中 約128篇] --&gt; C[每領域前5篇 ≤35篇] --&gt; D[OpenAI gpt-4o 摘要] --&gt; E[PDF＋LINE 12篇]
+  A2[30+ RSS] --&gt; B2[所有會員關鍵字聯集比對&lt;br&gt;每篇記錄命中哪些關鍵字] --&gt; C2[去重後每領域前5篇] --&gt; D2[claude -p Sonnet 摘要&lt;br&gt;每篇只做一次，存快取] --&gt; E2[依會員關鍵字分發&lt;br&gt;PDF／LINE]
+```
+</pre></details></div>
+</div>
+      </div>
+    </section>
+    <section data-cell="decisions">
+      <div class="cell-heading">
+        <h2>③決策點</h2>
+        <span>③ Decisions</span>
+      </div>
+      <div class="cell-content">
+        <div data-field="decisions" class="card-field">
+  <h3>決策 / Decisions</h3>
+  <div class="field-content"><p>成本（只算進 PDF 的篇數，每天 ≤35 篇、每月約 1,050 篇；每篇約輸入 4.5K、輸出 0.8K token；價格依官方 11/03）：</p>
+<table>
+  <thead><tr><th>模型（claude -p）</th><th>每月</th></tr></thead>
+  <tbody>
+    <tr><td>Sonnet 5.5（PM 建議，品質好）</td><td>約 US$18</td></tr>
+    <tr><td>Opus 5.5</td><td>約 US$36</td></tr>
+    <tr><td>Haiku 5.5</td><td>約 US$1</td></tr>
+  </tbody>
+</table>
+<p>加 JD（一次性 US$30–40，之後每月 US$2–5）：Sonnet 方案首月約 US$60、之後每月約 US$22，不超過 100。<br>
+決策：①走 claude -p（帳號 A extra credit，額度約 US$200/月），不放 API key，和 JD 同一條路。②模型 Sonnet 5.5。③會員關鍵字：聯集爬一次、每篇摘要只做一次並快取，成本跟「不重複文章數」成正比，不跟會員數成正比；每領域上限改成設定值。④會員資料、付費、多租戶屬架構決策，實作前先跟 owner 討論。排佇列最後。</p>
+<p><strong>D212 B 架構決策（Claude API 方案）：</strong></p>
+<ul>
+  <li><strong>選 Haiku 5.5：</strong>改走官方 <code>anthropic</code> SDK 2.8.0，選用 <code>claude-haiku-5-5</code>（輸入 US$0.10 / MTok、輸出 US$0.50 / MTok，來源 2026-11-24 官方 models overview；設定 effort=low，不傳 temperature 因 Haiku 5.5 拒絕非預設值）。</li>
+  <li><strong>費用保護語意：</strong>內建 CostGuard 三道防護（預設每日 40 篇上限、總花費上限 US$0.65、單篇 max_tokens 3000）。超額停止但仍出 PDF，僅在全失敗時才 exit 1。</li>
+  <li><strong>不自寫重試：</strong>依賴 Anthropic SDK 內建 <code>max_retries=2</code> 與指數退避處理暫態網路錯誤。</li>
+  <li><strong>每日花費估算：</strong>每日約 35 篇實際估算（每篇 2K 輸入 + 1K 輸出 &asymp; US$0.0007），每日約 US$0.03，對比每日上限 US$0.65 具充足安全餘量。</li>
+</ul>
+</div>
+</div>
+      </div>
+    </section>
+    <section data-cell="evidence">
+      <div class="cell-heading">
+        <h2>④證據</h2>
+        <span>④ Evidence</span>
+      </div>
+      <div class="cell-content">
+        <div data-field="evidence" class="card-field">
+  <h3>證據 / Evidence</h3>
+  <div class="field-content">
+  <table>
+    <thead><tr>
+      <th>指標</th>
+      <th>before</th>
+      <th>after（N）</th>
+      <th>這證明什麼</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td>單元測試 <code>tests/test_summarize_claude.py</code></td>
+        <td>無</td>
+        <td>14 passed／0 紅（N=14）</td>
+        <td>成功、逾時重試、快取命中、格式解析、失敗跳過、backend 切換、無 key 可 import 皆涵蓋。</td>
+      </tr>
+      <tr>
+        <td>sabotage A：拿掉快取讀取</td>
+        <td>14 綠</td>
+        <td>12 綠、2 紅（N=14；<code>cache_hit_and_multiple_urls</code>、<code>cache_fallback_title</code>）</td>
+        <td>快取 guard 被測試守住。</td>
+      </tr>
+      <tr>
+        <td>sabotage B：拿掉重試＋失敗不再拋錯</td>
+        <td>14 綠</td>
+        <td>6 綠、8 紅（N=14；含 <code>timeout_retry_success</code>、<code>timeout_both_failure</code>、<code>format_parsing_errors</code>、<code>per_article_failure_skipped</code>）</td>
+        <td>重試與失敗跳過 guard 被守住。</td>
+      </tr>
+      <tr>
+        <td>真實小樣本（<code>LOOKBACK_DAYS=1</code>，3 篇，<code>claude -p sonnet</code>）</td>
+        <td>gpt-4o 無法重跑</td>
+        <td>44.8／49.2／45.7 秒；平均 46.6&plusmn;2.3 秒（N=3）；評分 4.7／5.0／5.3；輸出 760–1009 字</td>
+        <td>真實呼叫可用、不需 API key；輸出含 ## 標題、### 評分＋⭐ X.X 分、摘要、比喻、學習路徑、原文連結，<code>extract_score_from_response</code> 解析成功。</td>
+      </tr>
+      <tr>
+        <td>token／費用（<code>claude -p</code> 回報）</td>
+        <td>預估每篇輸入約 4.5K</td>
+        <td>output 825–1126 tokens；cache_creation 約 11–12.7K＋cache_read 3.5–5.1K；<code>total_cost_usd</code> 約 0.054–0.059／篇（API 等值，N=3）</td>
+        <td>每篇輸入約 15K，高於預估 4.5K；多出的是 Claude Code 自帶系統提示詞。</td>
+      </tr>
+      <tr>
+        <td>快取命中</td>
+        <td>每次重跑都重叫</td>
+        <td>第二次 0.001 秒、不呼叫（N=2 次執行）</td>
+        <td>重跑不重花額度。</td>
+      </tr>
+    </tbody>
+  </table>
+  <p><strong>品質比對 gpt-4o 的限制：</strong>沒有 OpenAI key，舊 gpt-4o 輸出只留在 <code>news_report_2025*.md</code>／PDF，原文已不在，無法同篇重跑，只能比格式與結構：骨架與舊 prompt 一致，評分有區分度（三篇各不同、附新穎／有趣／實用三項）。內容品質無法同篇對照，如實標示。另：樣本第 1 篇回報「原文內容未提供」——RSS 只帶標題或極短內文，屬來源資料問題。</p>
+  <p>meta: 設備=iMac（venv python3.12）；樣本=<code>urls.txt</code> 前幾個來源當日文章 3 篇；<code>claude -p</code> 2.1.330，使用 sonnet 模型、no-session-persistence、disable-slash-commands、tools 留空、json 輸出；commit=<code>ba12f25</code>（feat/claude-p-summary，未 push）。</p>
+
+  <p><strong>Claude API 驗證證據（11/24）：</strong></p>
+  <table>
+    <thead><tr>
+      <th>指標</th>
+      <th>before</th>
+      <th>after</th>
+      <th>這證明什麼</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td>單元測試</td>
+        <td>14 passed（claude -p）</td>
+        <td>32 passed（0 failed）</td>
+        <td>完整涵蓋 Anthropic SDK 初始化、費用 Guard 限制、快取、錯誤處置、脫敏與 exit code。</td>
+      </tr>
+      <tr>
+        <td>sabotage 各項紅數</td>
+        <td>原 S13 未被守住（0 紅）</td>
+        <td>14 類全紅（S1: 1, S2: 1, S3: 2, S4: 2, S5: 2, S6: 2, S7: 3, S8: 3, S9: 1, S10: 2, S11: 1, S12a: 3, S12b: 3, S13a: 1, S13b: 1, S14a: 1, S14b: 6）</td>
+        <td>快取、篇數上限、花費上限、token 限制、異常停止、遮蔽脫敏、全失敗退出等 14 類防護機制全部被測試精準守住。</td>
+      </tr>
+      <tr>
+        <td>secret 掃描</td>
+        <td>無專案專屬掃描</td>
+        <td><code>scripts/secret_scan.py</code> 0 命中</td>
+        <td>所有程式碼、devlog 與卡片皆無洩漏真實金鑰、Authorization Bearer 標頭或機敏金鑰格式。</td>
+      </tr>
+      <tr>
+        <td>本機未用真金鑰</td>
+        <td>依賴本機 Claude CLI 登入憑證</td>
+        <td>單元測試全程 mock，未設定亦未呼叫真實金鑰與網路 API</td>
+        <td>測試環境完全隔離安全，無意外扣款、網路依賴或金鑰洩漏風險。</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+      </div>
+    </section>
+    <section data-cell="outcome">
+      <div class="cell-heading">
+        <h2>⑤成效與限制</h2>
+        <span>⑤ Outcome & limits</span>
+      </div>
+      <div class="cell-content">
+        <div data-field="outcome" class="card-field">
+  <h3>結果與限制 / Outcome &amp; limits</h3>
+  <div class="field-content"><p><strong>有效：</strong>摘要改走 <code>claude -p</code>（Sonnet），不用 API key；URL hash 快取；失敗重試一次後丟例外由 <code>main.py</code> 既有 try/except 跳過該篇；OpenAI 保留為 <code>SUMMARY_BACKEND=openai</code> fallback（預設關，client 改 lazy）；<code>MAX_PER_DOMAIN</code> 可由 env 設定（預設 5）。</p>
+  <p><strong>有效（Claude API）：</strong>採用官方 anthropic SDK 2.8.0，無縫切換模型 claude-haiku-5-5；內建三道費用保護（每日篇數、費用、max_tokens）；失敗大聲（拋出 FatalSummaryError 並遮蔽 headers 機敏資料）；全失敗 exit 1。</p>
+  <p><strong>未解／風險：</strong>① GitHub Actions 沒有 Claude 登入，CI 無法跑此路徑，須改由 iMac launchd（NEWSCRAWL-IMAC 方案）或另想辦法；本卡未動 CI，請 PM 決定。② 耗時：每篇約 47 秒，35 篇循序約 27 分鐘；可平行呼叫（尚未做）。③ 額度：每篇約 15K 輸入，<code>total_cost_usd</code> 約 0.055／篇，35 篇／天約 US$1.9（API 等值），比卡③預估高，月額度需重算。④ 品質無法與 gpt-4o 同篇對照。⑤ RSS 內文過短時摘要資訊有限。</p>
+  <p><strong>未解／風險（Claude API）：</strong>① 首次 CI 實跑尚待 PM 手動觸發；② 每日花費約 US$0.03 為靜態估算，需由上線首次 run 之 usage 行校正；③ <code>tests/test_line_flex_builder.py::test_build_carousel_message_structure</code> 在 main 上即失敗（KeyError: 'text'，非本卡引入）；④ <code>claude -p</code> 路徑已廢棄。</p>
+</div>
+</div>
+        <div data-field="next" class="card-field">
+  <h3>下一步 / Next</h3>
+  <div class="field-content"><p>PM 決定 CI 與 iMac 的執行位置；視需要加平行呼叫、降低系統提示詞開銷；會員關鍵字聯集屬架構決策，另開決策卡。</p>
+  <p><strong>下一步（Claude API）：</strong>PM 驗收 &rarr; push main &rarr; 手動觸發一次 GitHub Actions &rarr; 看 log 中的 usage 行校正實際成本與 token 數。</p></div>
+</div>
+        <div data-field="cleanup" class="card-field">
+  <h3>收尾清理 / Cleanup</h3>
+  <div class="field-content"><p>已刪 <code>sab_tmp/</code>（sabotage 暫存副本）、<code>.cache/sample</code> 與 <code>.cache/sample_out.md</code>（樣本產物）、<code>.hydra/</code> 執行器進度檔；brief 已封存 <code>~/dev-archive/news_crawl/</code>。</p></div>
+</div>
+      </div>
+    </section>
+    <section data-cell="pitch">
+      <div class="cell-heading">
+        <h2>⑥兩種講法</h2>
+        <span>⑥ Two pitches</span>
+      </div>
+      <div class="cell-content">
+        <div data-field="pitch" class="card-field">
+  <h3>白話講法 / Plain-language pitch</h3>
+  <div class="field-content">
+  <p>RD 30 秒版：generate_news_summary_and_opinion 先查 sha256(url) 快取，未命中就 subprocess 呼叫 <code>claude -p --model sonnet</code>（stdin 傳 prompt、json 輸出），失敗／逾時重試一次，仍失敗丟 RuntimeError 由 main 跳過該篇；成功才寫快取。OpenAI 路徑留作開關。14 個 pytest，兩種 sabotage 各紅 2／8。</p>
+  <p>一般使用者一句話：每天新聞摘要改由 Claude 寫，同一篇不會重複花錢，內容格式和以前一樣。</p>
+  <p>名詞白話：claude -p＝用命令列請 Claude 回答一次就結束；快取＝寫過的摘要存起來，下次直接拿。</p>
+  <hr style="border: 0; border-top: 1px dashed var(--line); margin: 1rem 0;">
+  <p><strong>更新版（Claude API）：</strong></p>
+  <p><b>RD 30 秒版：</b>改走 SDK＋三道費用 guard＋失敗大聲。以官方 anthropic SDK 呼叫 Haiku 5.5（effort=low），CostGuard 守護每日篇數（40 篇）、費用上限（US$0.65）與單篇 max_tokens（3000）；超額停止但仍出 PDF，全失敗才 exit 1；錯誤遮蔽 headers 機敏資訊；單元測試 32 passed，sabotage 14 項防護全紅。</p>
+  <p><b>一般使用者一句話：</b>每天的新聞摘要換成 Claude 來寫，還是照舊每天早上收到，且有每日花費上限。</p>
+</div>
+</div>
+      </div>
+    </section>
+
+  </main>
+</body>
+</html>
